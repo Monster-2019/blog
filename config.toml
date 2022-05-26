@@ -1,0 +1,57 @@
+baseurl = "https://blog.dongxin.cool/"
+title = "Monster Cone"
+theme = "hugo-coder"
+languagecode = "zh-CN"
+defaultcontentlanguage = "zh-cn"
+
+paginate = 20
+
+pygmentsstyle = "bw"
+pygmentscodefences = true
+pygmentscodefencesguesssyntax = true
+
+#disqusshortname = "yourdiscussshortname"
+
+[params]
+  author = "Monster cone"
+  description = "Monster cone personal website"
+  keywords = "blog,developer,personal"
+  #avatarurl = ""
+  #gravatar = "dongxin2019@gmail.com"
+
+  #favicon_32 = "/img/favicon-32x32.png"
+  #favicon_16 = "/img/favicon-16x16.png"
+
+  since = 2019
+
+  enableTwemoji = true
+
+  colorScheme = "dark"
+  hidecolorschemetoggle = false
+
+  customCSS = []
+  customSCSS = []
+  customJS = []
+
+[taxonomies]
+  category = "categories"
+  series = "series"
+  tag = "tags"
+  author = "authors"
+
+# Social links
+[[params.social]]
+  name = "Github"
+  icon = "fa fa-github fa-2x"
+  weight = 1
+  url = "https://github.com/Monster-2019/"
+
+# Menu links
+[[menu.main]]
+  name = "Blog"
+  weight = 1
+  url  = "post/"
+#[[menu.main]]
+#  name = "About"
+#  weight = 2
+#  url = "about/"
