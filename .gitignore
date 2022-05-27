@@ -4,4 +4,4 @@ node_modules/
 .env
 .hugo_build.lock
 public/
-themes/
+themes/hugo-coder/
