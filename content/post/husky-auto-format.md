@@ -1,7 +1,6 @@
 ---
 title: "Husky Auto Format"
 date: 2022-06-13T16:45:42+08:00
-draft: true
 description: Eslint + Prettier + husky 自动格式化
 ---
 
