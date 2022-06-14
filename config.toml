@@ -26,7 +26,7 @@ pygmentscodefencesguesssyntax = true
 
   enableTwemoji = true
 
-  colorScheme = "dark"
+  colorScheme = "light"
   hidecolorschemetoggle = false
 
   customCSS = []
