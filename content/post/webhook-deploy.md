@@ -1,5 +1,5 @@
 ---
-title: "Webhook Auto Deploy Hugo Blog"
+title: "使用webhook自动部署hugo博客"
 date: 2022-06-14T16:33:31+08:00
 ---
 
@@ -13,7 +13,7 @@ date: 2022-06-14T16:33:31+08:00
 
 可以用你熟悉的语言来注册服务，我这里使用node和koa2框架
 
-1. 创建项目
+###### 1. 创建项目
 ```
 mkdir webhook
 
@@ -32,7 +32,7 @@ wekhook
 ├── package.json
 ```
 
-2. 安装相关依赖
+###### 2. 安装相关依赖
 ```
 npm install child_process koa util pm2
 
@@ -44,7 +44,7 @@ npm install nodemon --save-dev
 - pm2 进程管理库，可以在项目部署后管理项目
 - nodemon 热重载库，避免文件修改需要重新启动
 
-3. webhook api
+###### 3. webhook api
 
 通过koa框架搭建一个简易的api服务
 
@@ -123,7 +123,7 @@ npm run pm2
 ```
 
 
-4. 使用nginx反代
+###### 4. 使用nginx反代
 首先是api的反代，如下：
 ```
 server {
@@ -166,3 +166,8 @@ server {
 }
 ```
 server_name 修改为你的博客域名，在访问博客时，他会显示/home/www/blog/public/目录下的index.html文件
+
+###### 5. github配置webhook
+![image](https://monster.aiur.site/%E5%BE%AE%E4%BF%A1%E6%88%AA%E5%9B%BE_20220615090345.png)
+Payload URL 配置刚才nginx配置的域名就行，配置好后每次提交都会在Recent Deliveries中看到历史Webhook触发时间，触发不同项目的webhook通过域名后面的目录控制，如xxx/blog、xxx/hook等
+
