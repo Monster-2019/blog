@@ -1,10 +1,10 @@
 baseurl = "https://blog.dongxin.cool/"
 title = "Monster Cone"
-theme = "hugo-coder"
+theme = "zozo"
 languagecode = "zh-CN"
 defaultcontentlanguage = "zh-cn"
 
-paginate = 20
+paginate = 4
 
 pygmentsstyle = "bw"
 pygmentscodefences = true
