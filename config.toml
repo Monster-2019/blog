@@ -7,7 +7,7 @@ hasCJKLanguage = true                  # has chinese/japanese/korean ?  # 自动
 summaryLength = 100
 paginate = 4                           # shows the number of articles   # 首页显示文章数量
 enableEmoji = true
-googleAnalytics = "G-1R9MDPKXR7"                   # your google analytics id       # Google统计代码
+googleAnalytics = "UA-172984244-1"                   # your google analytics id       # Google统计代码
 disqusShortname = ""                   # your discuss shortname         # Disqus评论系统代码
 
 pygmentsUseClasses = true
