@@ -1,57 +1,71 @@
-baseurl = "https://blog.dongxin.cool/"
-title = "Monster Cone"
+baseURL = "https://blog.dongxin.cool"
+languageCode = "zh-cn"
+defaultContentLanguage = "zh-cn"
+title = "Monster Blog"                        # site title                     # 网站标题
 theme = "zozo"
-languagecode = "zh-CN"
-defaultcontentlanguage = "zh-cn"
+hasCJKLanguage = true                  # has chinese/japanese/korean ?  # 自动检测是否包含 中文\日文\韩文
+summaryLength = 100
+paginate = 4                           # shows the number of articles   # 首页显示文章数量
+enableEmoji = true
+googleAnalytics = ""                   # your google analytics id       # Google统计代码
+disqusShortname = ""                   # your discuss shortname         # Disqus评论系统代码
 
-paginate = 4
-
-pygmentsstyle = "bw"
-pygmentscodefences = true
+pygmentsUseClasses = true
+pygmentCodeFences = true
 pygmentscodefencesguesssyntax = true
 
-#disqusshortname = "yourdiscussshortname"
+[author]                               # essential                      # 必需
+  name = "Monster Cone"
+
+[blackfriday]
+  smartypants = false
+
+[[menu.main]]                          # config your menu               # 配置菜单
+  name = "Home"
+  weight = 10
+  identifier = "home"
+  url = "/"
+[[menu.main]]
+  name = "Archive"
+  weight = 20
+  identifier = "archive"
+  url = "/post/"
+[[menu.main]]
+  name = "Tags"
+  weight = 30
+  identifier = "tags"
+  url = "/tags/"
+[[menu.main]]
+#  name = "About"
+#  weight = 40
+#  identifier = "about"
+#  url = "/about/"
 
 [params]
-  author = "Monster cone"
-  description = "Monster cone personal website"
-  keywords = "blog,developer,personal"
-  #avatarurl = ""
-  #gravatar = "dongxin2019@gmail.com"
+  subTitle = "Monster Blog"                                       # site's subTitle              # 网站二级标题
+  footerSlogan = "i love converse forever"                                   # site's footer slogan         # 网站页脚标语
+  keywords = ["Hugo","zozo","blog","web"]                                   # site's keywords              # 网站关键字
+  description = ""                        # site's description           # 网站描述
+  enableMathJax = false                                                 # enable mathjax               # 是否使用mathjax（数学公式）
+  enableSummary = false                                                 # display the article summary  # 是否显示文章摘要
+  mainSections = ["posts","post"]
+  
+# Valine.
+# You can get your appid and appkey from https://leancloud.cn
+# more info please open https://valine.js.org
+[params.valine]
+  enable = false
+  appId = ""
+  appKey = ""
+  placeholder = " "
+  visitor = true
 
-  #favicon_32 = "/img/favicon-32x32.png"
-  #favicon_16 = "/img/favicon-16x16.png"
+# Your socail's url
+# 社交地址配置
+[social]
+#  github = "https://github.com/Monster-2019"
 
-  since = 2019
-
-  enableTwemoji = true
-
-  colorScheme = "light"
-  hidecolorschemetoggle = false
-
-  customCSS = []
-  customSCSS = []
-  customJS = []
-
-[taxonomies]
-  category = "categories"
-  series = "series"
-  tag = "tags"
-  author = "authors"
-
-# Social links
-[[params.social]]
-  name = "Github"
-  icon = "fa fa-github fa-2x"
-  weight = 1
-  url = "https://github.com/Monster-2019/"
-
-# Menu links
-[[menu.main]]
-  name = "Blog"
-  weight = 1
-  url  = "post/"
-#[[menu.main]]
-#  name = "About"
-#  weight = 2
-#  url = "about/"
+[markup]
+[markup.goldmark]
+[markup.goldmark.renderer]
+  unsafe = true
