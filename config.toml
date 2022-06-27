@@ -1,6 +1,6 @@
 baseURL = "https://blog.dongxin.cool"
 languageCode = "zh-cn"
-title = "Monster Cone Blog"
+title = "Monster Cone"
 theme = "cactus"
 # copyright = "You" # cactus will use title if copyright is not set
 # disqusShortname = "example" # Used when comments is enabled. Cactus will use site title if not set
