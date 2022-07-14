@@ -67,6 +67,8 @@ weight = 3
   show_updated = true # default
   showReadTime = true # default
 
+  css = ["css/custom.css"]
+
   # [params.comments]
   #  enabled = false # default
   #  engine = "cactus_comments" # only disqus, utterances, and cactus_comments is supported
