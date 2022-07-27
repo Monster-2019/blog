@@ -24,7 +24,7 @@ Socks5 脚本有很多，我目前使用的是 [danted](https://github.com/Lozy/
 3. 安装后默认就是开启状态，我们加上软链接方便命令操作
 
 ```
-[root@monster-cone src]# ln -s /etc/danted/sbin/sockd /usr/bin/sockd
+[root@monster-cone src]# ln -s /etc/init.d/sockd /usr/bin/sockd
 ```
 
 4. 查看相关配置按自己需求修改
