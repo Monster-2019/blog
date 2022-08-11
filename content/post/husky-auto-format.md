@@ -1,7 +1,7 @@
 ---
 title: "利用husky钩子提交自动格式化"
 date: 2022-06-13T16:45:42+08:00
-description: Eslint + Prettier + husky 自动格式化
+description: 多人协作开发除了共同修改文件触发git冲突，还经常有实现相同却因为代码风格不同而造成的diff问题，虽然不会有什么大影响，但每次人工手动merge也是很麻烦的一件事，因此我们通过husky配合Eslint、Prettier来实现自动格式化统一代码风格
 tags:
 - Eslint
 - Prettier

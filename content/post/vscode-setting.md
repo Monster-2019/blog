@@ -1,10 +1,10 @@
 ---
 title: Vue项目格式化
 date: 2022-05-25T18:16:27+08:00
+description: VsCode配置保存自动格式化Vue文件
 tags:
 - VsCode
 - Vue
-description: Vscode vetur插件根据eslint配置自动格式化代码
 ---
 VsCode配置保存自动格式化Vue文件
 <!--more-->

@@ -1,7 +1,7 @@
 ---
 title: "常用高频方法"
 date: 2022-08-04T14:45:39+08:00
-description: 开发中常用高频方法整理
+description: 整理一些开发中常用到的高频方法
 tags:
 - Javascript
 ---

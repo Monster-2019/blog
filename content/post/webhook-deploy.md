@@ -1,6 +1,7 @@
 ---
 title: "使用webhook自动部署hugo博客"
 date: 2022-06-14T16:33:31+08:00
+description: 如今有很多静态博客框架，例如hexo、hugo、vuepress等，都是编译后生成纯静态文件的。但在部署的支持上并不是太优化，网上大部分都是部署到github page上，但作为IT人，肯定是想部署到自己的服务器上的，今天就给大家介绍通过github的webhook来实现静态博客的自动部署。
 tags:
 - Webhook
 - Github

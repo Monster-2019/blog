@@ -1,6 +1,7 @@
 ---
 title: 'Socks5搭建'
 date: 2022-07-01T14:17:09+08:00
+description: Socks5 脚本有很多，我目前使用的是 [danted](https://github.com/Lozy/danted.git)，快速上手，简单易懂
 tag:
 - Socks5
 - Linux

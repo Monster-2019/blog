@@ -2,9 +2,9 @@
 title: Vue-cli3项目模板
 date: 2022-05-25T18:16:27+08:00
 categories: Vue
+description: Webpack现在是Vue项目打包的首选，也是vue-cli3脚手架的默认打包工具，在此分享出自己基于Vue-cli3创建的项目基础配置，为大家解决webpack配置复杂问题。
 tags: 
 - Vue
-description: vue.config.js配置
 ---
 Webpack现在是Vue项目打包的首选，也是vue-cli3脚手架的默认打包工具，在此分享出自己基于Vue-cli3创建的项目基础配置，为大家解决webpack配置复杂问题。
 
