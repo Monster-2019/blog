@@ -11,7 +11,7 @@ tags:
 
 #### 请求基本配置
 
-```
+```javascript
 const BASE_URL = 'https://xxxx.com/xxx'       // 请求地址
 const TIME_OUT = 5000       // 请求超时时间，单位毫秒
 ```
@@ -127,7 +127,7 @@ const refreshToken = (params) => fetchApi.get(`${base_url}/auth/refresh_token`, 
 ```
 
 #### 完整的代码如下
-```
+```javascript
 const base_url = '/api'
 const TIME_OUT = 30000
 
@@ -218,7 +218,7 @@ export default fetchApi
 ```
 
 #### 使用方法
-```
+```javascript
 fetchApi('/api/login', { username: "monster", password: 123456 }).then(res => xxx)
 ```
 
