@@ -1,5 +1,5 @@
 ---
-title: 'Fetch'
+title: 'Fetch封装'
 date: 2022-08-26T11:03:58+08:00
 description: 随着浏览器的更新迭代，对 fetch 和 Promise 的支持也越来越好，在一些需求小或者无兼容需求的项目引入请求库无疑是浪费资源的，而原生支持的 fetch 就为我们提供了另一条路，下面针对 fetch 和 API 规范做封装
 tags:
@@ -128,9 +128,6 @@ const refreshToken = (params) => fetchApi.get(`${base_url}/auth/refresh_token`, 
 
 #### 完整的代码如下
 ```
-import { paramsStringify } from '@utils'
-import { refreshToken } from '@/api'
-
 const base_url = '/api'
 const TIME_OUT = 30000
 
