@@ -114,3 +114,15 @@ const downloadBlob = (response) => {
     }
 }
 ```
+
+```
+/**
+ * @description: 时间戳格式化
+ * @param {time} 时间戳
+ * @return {}
+ */
+const timestamp = (time) => {
+    let timems = Number(time.toString().length === 13 ? time : time + '000')
+    return new Date(timems + 8 * 3600 * 1000).toJSON().substr(0, 19).replace('T', ' ')
+}
+```
