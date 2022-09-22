@@ -4,7 +4,7 @@ date: 2022-09-22T14:07:46+08:00
 description: PWA(渐进式Web应用)，将你的web app安装在桌面给你带来原生应用的体验
 tags:
     - Javascript
-    - Fetch
+    - PWA
 ---
 
 当你的 Web 在应用了 PWA 后，可以将 Web 安装在桌面上，就算原生应用一样离线使用，还可以利用 Web API 推送通知，从而提高用户体验，下面就让我们开始吧。
