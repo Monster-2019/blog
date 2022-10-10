@@ -20,7 +20,7 @@ const debounce = (func, delay = 200) => {
 	return function (...args) {
 		const context = this;
 		clearTimeout(timer);
-		timer = setTimeOut(() => {
+		timer = setTimeout(() => {
 			func.apply(context, args);
 		}, delay)
 	}
