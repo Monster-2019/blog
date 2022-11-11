@@ -1,7 +1,8 @@
-FROM klakegg/hugo:0.101.0 as hugo
+FROM klakegg/hugo:0.101.0-ext-alpine as hugo
 
 WORKDIR /app
 COPY . .
+RUN git submodule init
 RUN hugo --minify
 
 FROM nginx:1.23.1-alpine
