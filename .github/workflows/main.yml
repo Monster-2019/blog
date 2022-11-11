@@ -1,0 +1,64 @@
+# This is a basic workflow to help you get started with Actions
+
+name: CI to Docker Hub
+
+# Controls when the action will run.
+on:
+    # Triggers the workflow on push or pull request events but only for the master branch
+    push:
+        branches:
+            - main
+
+    # Allows you to run this workflow manually from the Actions tab
+    workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+    # This workflow contains a single job called "build"
+    build-and-push-docker-image:
+        # The type of runner that the job will run on
+        runs-on: ubuntu-latest
+
+        # Steps represent a sequence of tasks that will be executed as part of the job
+        steps:
+            # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+            - name: Check Out Repo
+              uses: actions/checkout@v2
+
+            - name: Login to Docker Hub
+              uses: docker/login-action@v1
+              with:
+                  registry: registry.cn-hangzhou.aliyuncs.com
+                  username: ${{ secrets.DOCKER_HUB_USERNAME }}
+                  password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+            - name: Set up Docker Buildx
+              id: buildx
+              uses: docker/setup-buildx-action@v1
+
+            - name: Build and push
+              id: docker_build
+              uses: docker/build-push-action@v2
+              with:
+                  context: ./
+                  file: ./Dockerfile
+                  push: true
+                  tags: registry.cn-hangzhou.aliyuncs.com/dongxin/blog:latest
+
+            - name: Image digest
+              run: echo ${{ steps.docker_build.outputs.digest }}
+
+    run-latest-docker-image:
+        # 需要build-and-push-docker-image完成后再执行
+        needs: build-and-push-docker-image
+        runs-on: ubuntu-latest
+        steps:
+            - name: run-latest-docker-image
+              uses: appleboy/ssh-action@master
+              with:
+                  host: ${{ secrets.HOST }}
+                  username: ubuntu
+                  key: ${{ secrets.DEPLOY_KEY }}
+                  script: |
+                      sudo docker compose -f /opt/compose/blog/docker-compose.yml pull blog
+                      sudo docker compose -f /opt/compose/blog/docker-compose.yml up -d --build blog
