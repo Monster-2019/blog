@@ -2,8 +2,6 @@ FROM klakegg/hugo:0.101.0-ext-alpine as hugo
 
 WORKDIR /app
 COPY . .
-RUN git pull --recurse-submodules 
-RUN git submodule update --init --recursive
 RUN hugo --minify
 
 FROM nginx:1.23.1-alpine
