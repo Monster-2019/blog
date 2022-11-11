@@ -47,7 +47,7 @@ defaultContentLanguage = "cn"
     [languages.cn.params.logo]
       logoText = "Monster Cone"
       logoHomeLink = "/"
-      path = "/images/logo.png"
+      # path = "/images/logo.png"
       # alt = "Monster Cone"
 
     [languages.cn.menu]
