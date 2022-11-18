@@ -1,4 +1,4 @@
-baseurl = "https://blog.dongxin.cool"
+baseurl = "https://blog.dongxin.co"
 languageCode = "zh-cn"
 theme = "hello-friend"
 paginate = 5
