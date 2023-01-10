@@ -57,12 +57,12 @@ defaultContentLanguage = "cn"
         url = "/"
         weight = 1
       [[languages.cn.menu.main]]
-        identifier = "post"
-        name = "文章"
-        url = "/post/"
-        weight = 2
-      [[languages.cn.menu.main]]
         identifier = "tags"
         name = "标签"
         url = "/tags/"
+        weight = 2
+      [[languages.cn.menu.main]]
+        identifier = "categories"
+        name = "分类"
+        url = "/categories/"
         weight = 3
