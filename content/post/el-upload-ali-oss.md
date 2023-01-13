@@ -9,7 +9,7 @@ categories:
 
 封装 el-upload 上传到阿里云 OSS，开箱即用。
 
-#### 效果图
+### 效果图
 
 ![image](https://monster.aiur.site/%E5%BE%AE%E4%BF%A1%E6%88%AA%E5%9B%BE_20230110144006.png)
 
@@ -17,7 +17,7 @@ categories:
 
 ![Image](https://monster.aiur.site/%E5%BE%AE%E4%BF%A1%E6%88%AA%E5%9B%BE_20230110144120.png)
 
-#### ali-oss 配置
+### ali-oss 配置
 
 我们先安装 ali-oss
 
@@ -62,9 +62,9 @@ export default client
 
 在第一次引入的时候就生成了一次 ali-oss 实例，后续使用就都返回这个实例，不再调用接口了。
 
-#### 组件代码
+### 组件代码
 
-##### Template
+#### Template
 
 ```html
 <template>
@@ -98,7 +98,7 @@ export default client
 
 type 根据不同类型文件显示不同的文件列表风格和按钮风格。dialog 用来预览图片。
 
-##### Script 部分
+#### Script 部分
 
 只说明核心内容部分，完整代码在最后。
 
@@ -287,9 +287,10 @@ const rowDrag = () => {
 
 当最大上传数量大于 1 时，我们才能使用拖拽。拖拽使用的是 sortablejs 库，具体用法请看[Sortable 文档](https://sortablejs.github.io/Sortable/)
 
-#### 完整代码
+### 完整代码
 
-```vue
+{{< code language="vue" title="Upload.vue" id="1" expand="Show" collapse="Hide" isCollapsed="true" >}}
+
 <template>
     <el-upload
         ref="upload"
@@ -316,6 +317,7 @@ const rowDrag = () => {
     <el-dialog v-model="dialogVisible" top="50px">
         <img w-full :src="dialogImageUrl" alt="Preview Image" />
     </el-dialog>
+
 </template>
 
 <script lang="ts" setup>
@@ -505,14 +507,15 @@ const handleExceed = (file: any) => {
     transition: none !important;
 }
 </style>
-```
 
-#### 组件使用
+{{< /code >}}
+
+### 组件使用
 
 ```
 import Upload from './Upload.vue';
 
 <Upload accept="image" showList v-model="value" /> // 上传图片
 
-<Upload accept="audio" showList originName type="audio" v-model="data.extra.src" /> // 上传非图片
+<Upload accept="audio" showList originName type="audio" v-model="value" /> // 上传非图片
 ```
