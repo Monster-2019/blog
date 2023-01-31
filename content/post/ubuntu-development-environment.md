@@ -1,7 +1,7 @@
 ---
 title: 'Ubuntu环境搭建脚本'
 date: 2022-09-08T17:51:55+08:00
-description: 快速搭建Ubuntu前端开发环境脚本
+description: Ubuntu环境搭建脚本
 tags:
     - Ubuntu
     - Bash
@@ -14,16 +14,11 @@ tags:
 sudo sed -i "s@http://.*archive.ubuntu.com@https://mirrors.tuna.tsinghua.edu.cn@g" /etc/apt/sources.list
 sudo sed -i "s@http://.*security.ubuntu.com@https://mirrors.tuna.tsinghua.edu.cn@g" /etc/apt/sources.list
 sudo apt-get update
-echo "start install development environment"
+echo "start install environment"
 
 echo "start install git"
 sudo apt-get install git
 echo "end instasll git"
-
-echo "start install node"
-curl -sL https://deb.nodesource.com/setup_16.x | sudo -E bash -
-sudo apt-get install -y nodejs
-echo "end install node"
 
 echo "start install docker"
 sudo apt-get install -y \
