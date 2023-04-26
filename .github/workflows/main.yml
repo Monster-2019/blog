@@ -59,8 +59,8 @@ jobs:
               uses: appleboy/ssh-action@master
               with:
                   host: ${{ secrets.HOST }}
-                  username: ubuntu
-                  key: ${{ secrets.DEPLOY_KEY }}
+                  username: root
+                  password: ${{ secrets.PASSWORD }}
                   script: |
                       sudo docker compose -f /opt/compose/blog/docker-compose.yml pull blog
                       sudo docker compose -f /opt/compose/blog/docker-compose.yml up -d --build blog
