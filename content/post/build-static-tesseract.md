@@ -1,5 +1,5 @@
 ---
-title: "Build Static Tesseract"
+title: "构建静态Tesseract可执行程序"
 date: 2023-06-21T22:06:42+08:00
 description: 构建静态tesseract，方便ocr程序通过pyinstaller打包
 tags:
