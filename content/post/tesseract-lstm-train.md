@@ -1,6 +1,10 @@
 ---
 title: 'Tesseract 5.0 LSTM 训练、优化字体'
 date: 2023-08-21T13:53:21+08:00
+description: 通过LSTM模型，训练和优化自己的 Tesseract 字体，提高识别率。
+tags:
+    - Tesseract
+    - LSTM
 ---
 
 Tesseract 已经更新到了 5.0 版本，从 4.0 版本开始就可以使用 LSTM 模型进行训练了，相对于 4.0 版本之前的训练方法，通过 LSTM 模型训练更简单，准确率也更高。
