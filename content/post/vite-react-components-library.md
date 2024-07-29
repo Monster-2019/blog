@@ -1,7 +1,7 @@
 ---
-title: 'Vite构建基于React + TypeScript + TailwindCss 的React组件'
+title: '基于Vite + React + TypeScript + TailwindCss 构建React组件'
 date: 2024-07-29T21:06:15+08:00
-description: Chrome Extensions只有在指定子路由的时候才注入执行content.js，而不是在访问matches域名时注入执行
+description: 基于Vite + React + TypeScript + TailwindCss 构建React组件
 tags:
     - Vite
     - React
