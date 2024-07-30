@@ -239,3 +239,6 @@ export default defineConfig({
 定义一个名为 insertStyle 的 rollup 插件，通过 renderChunk 钩子获取编译打包后的 code，然后在首行加上 style 的导入 code，在 rollupOptions 的 plugins 中使用 insertStyle 插件即可。
 
 优点是不用再手动导入 style 文件，缺点是好像不支持 umd，暂时没有验证。
+
+如果想直接使用，可以使用我发布的[vite-react-components-template
+](https://github.com/Monster-2019/vite-react-components-template.git)模板
