@@ -3,7 +3,7 @@ languageCode = "zh-cn"
 theme = "hello-friend"
 paginate = 5
 defaultContentLanguage = "cn"
-googleAnalytics = 'UA-172984244-1'
+
 
 [params]
   # dir name of your blog content (default is `content/posts`).
@@ -43,6 +43,7 @@ googleAnalytics = 'UA-172984244-1'
     minuteReadingTime = "min read"
     dateFormatSingle = "2006-01-02"
     dateFormatList = "2006-01-02"
+    BaiduAnalytics = "a6d3c900559132bf099086e40f606f9b"
     # leave empty to disable, enter display text to enable
     # lastModDisplay = ""
 
