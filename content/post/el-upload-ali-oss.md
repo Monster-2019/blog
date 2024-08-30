@@ -9,14 +9,6 @@ categories:
 
 封装 el-upload 上传到阿里云 OSS，开箱即用。
 
-### 效果图
-
-![image](https://monster.aiur.site/%E5%BE%AE%E4%BF%A1%E6%88%AA%E5%9B%BE_20230110144006.png)
-
----
-
-![Image](https://monster.aiur.site/%E5%BE%AE%E4%BF%A1%E6%88%AA%E5%9B%BE_20230110144120.png)
-
 ### ali-oss 配置
 
 我们先安装 ali-oss
@@ -33,26 +25,26 @@ npm install ali-oss
 import OSS from 'ali-oss'
 
 const ossClient = async () => {
-    const res = await fetch('/XXX')
-    const { result } = await res.clone().json()
-    const client = new OSS({
-        region: 'oss-cn-shanghai',
-        accessKeyId: result.AccessKeyId,
-        accessKeySecret: result.AccessKeySecret,
-        stsToken: result.SecurityToken,
-        bucket: 'XXX'
-    })
-    return client
+	const res = await fetch('/XXX')
+	const { result } = await res.clone().json()
+	const client = new OSS({
+		region: 'oss-cn-shanghai',
+		accessKeyId: result.AccessKeyId,
+		accessKeySecret: result.AccessKeySecret,
+		stsToken: result.SecurityToken,
+		bucket: 'XXX'
+	})
+	return client
 }
 
 class SingleInstance {
-    instance
+	instance
 
-    static async getInstance() {
-        if (!this.instance) this.instance = await ossClient()
+	static async getInstance() {
+		if (!this.instance) this.instance = await ossClient()
 
-        return this.instance
-    }
+		return this.instance
+	}
 }
 
 let client = await SingleInstance.getInstance()
@@ -68,31 +60,31 @@ export default client
 
 ```html
 <template>
-    <el-upload
-        ref="upload"
-        :file-list="fileList"
-        :list-type="type === 'image' ? 'picture-card' : 'text'"
-        class="custom-uploader"
-        :class="fileList.length === limit ? 'hide' : ''"
-        action=""
-        :accept="allowAccept"
-        :limit="limit"
-        :multiple="multiple"
-        :show-file-list="showList"
-        :on-exceed="handleExceed"
-        :on-success="handleSuccess"
-        :on-remove="handleRemove"
-        :http-request="handleUpload"
-        :on-preview="handlePreview"
-        :before-upload="handleBeforeUpload"
-    >
-        <el-icon v-if="type === 'image'"><Plus /></el-icon>
-        <el-button v-else type="primary" v-show="type !== 'image'">{{ label }}</el-button>
-    </el-upload>
+	<el-upload
+		ref="upload"
+		:file-list="fileList"
+		:list-type="type === 'image' ? 'picture-card' : 'text'"
+		class="custom-uploader"
+		:class="fileList.length === limit ? 'hide' : ''"
+		action=""
+		:accept="allowAccept"
+		:limit="limit"
+		:multiple="multiple"
+		:show-file-list="showList"
+		:on-exceed="handleExceed"
+		:on-success="handleSuccess"
+		:on-remove="handleRemove"
+		:http-request="handleUpload"
+		:on-preview="handlePreview"
+		:before-upload="handleBeforeUpload"
+	>
+		<el-icon v-if="type === 'image'"><Plus /></el-icon>
+		<el-button v-else type="primary" v-show="type !== 'image'">{{ label }}</el-button>
+	</el-upload>
 
-    <el-dialog v-model="dialogVisible" top="50px">
-        <img w-full :src="dialogImageUrl" alt="Preview Image" />
-    </el-dialog>
+	<el-dialog v-model="dialogVisible" top="50px">
+		<img w-full :src="dialogImageUrl" alt="Preview Image" />
+	</el-dialog>
 </template>
 ```
 
@@ -115,51 +107,51 @@ import client from './upload'
 
 ```typescript
 const props = defineProps({
-    modelValue: {
-        // 双向绑定更改数据
-        type: [String, Array], // 如果单文件可以使用字符串，上传多个时使用数组
-        default: ''
-    },
-    accept: {
-        // 上传文件类型
-        type: String,
-        default: () => 'image'
-    },
-    limit: {
-        // 最大上传数量
-        type: Number,
-        default: () => 1
-    },
-    multiple: {
-        // 是否多选
-        type: Boolean,
-        default: () => true
-    },
-    label: {
-        // 非图片时按钮文本
-        type: String,
-        default: () => '上传文件'
-    },
-    showList: {
-        // 是否显示文件列表
-        type: Boolean,
-        default: () => false
-    },
-    type: {
-        // 上传类型 控制ui风格
-        type: String,
-        default: () => 'image'
-    },
-    originName: {
-        // 上传文件名是否使用原名，默认用uuid避免重名
-        type: Boolean,
-        default: () => false
-    },
-    drag: {
-        // 是否可拖拽修改顺序
-        type: Boolean,
-        default: () => false
-    }
+	modelValue: {
+		// 双向绑定更改数据
+		type: [String, Array], // 如果单文件可以使用字符串，上传多个时使用数组
+		default: ''
+	},
+	accept: {
+		// 上传文件类型
+		type: String,
+		default: () => 'image'
+	},
+	limit: {
+		// 最大上传数量
+		type: Number,
+		default: () => 1
+	},
+	multiple: {
+		// 是否多选
+		type: Boolean,
+		default: () => true
+	},
+	label: {
+		// 非图片时按钮文本
+		type: String,
+		default: () => '上传文件'
+	},
+	showList: {
+		// 是否显示文件列表
+		type: Boolean,
+		default: () => false
+	},
+	type: {
+		// 上传类型 控制ui风格
+		type: String,
+		default: () => 'image'
+	},
+	originName: {
+		// 上传文件名是否使用原名，默认用uuid避免重名
+		type: Boolean,
+		default: () => false
+	},
+	drag: {
+		// 是否可拖拽修改顺序
+		type: Boolean,
+		default: () => false
+	}
 })
 ```
 
@@ -167,38 +159,38 @@ const props = defineProps({
 
 ```typescript
 interface File {
-    uid: Number
-    status: String
-    name: String
-    url: String
+	uid: Number
+	status: String
+	name: String
+	url: String
 }
 const fileList = ref<File[]>([])
 
 watch(
-    () => props.modelValue,
-    (val: String[] | String) => {
-        let list: any[] = []
-        if (typeof val === 'string' && val) {
-            list = [val]
-        } else if (Array.isArray(val) && val.length > 0) {
-            list = val
-        } else {
-            list = []
-        }
-        const res = [...list]
-        if (res.length > 0) {
-            fileList.value = res.map((url: string) => {
-                const uid = new Date().getTime()
-                return {
-                    uid,
-                    status: 'success',
-                    name: window.decodeURI(url.slice(url.lastIndexOf('/') + 1)),
-                    url: url
-                }
-            })
-        }
-    },
-    { immediate: true, deep: true }
+	() => props.modelValue,
+	(val: String[] | String) => {
+		let list: any[] = []
+		if (typeof val === 'string' && val) {
+			list = [val]
+		} else if (Array.isArray(val) && val.length > 0) {
+			list = val
+		} else {
+			list = []
+		}
+		const res = [...list]
+		if (res.length > 0) {
+			fileList.value = res.map((url: string) => {
+				const uid = new Date().getTime()
+				return {
+					uid,
+					status: 'success',
+					name: window.decodeURI(url.slice(url.lastIndexOf('/') + 1)),
+					url: url
+				}
+			})
+		}
+	},
+	{ immediate: true, deep: true }
 )
 ```
 
@@ -208,22 +200,22 @@ el-upload 文件列表是数组类型，所以如果是单文件的字符串，�
 
 ```typescript
 const handleUpload = async (config: any) => {
-    try {
-        const {
-            file,
-            file: { uid }
-        } = config
-        const point = file.name.lastIndexOf('.')
-        const ext = file.name.substr(point)
-        const fileName = file.name.substring(0, point)
-        const date = new Date()
-        const curDate = `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`
-        const path = `/${curDate}/${props.originName ? fileName : v4().replace(/-/g, '')}.${ext}`
-        return await client.put(path, file)
-    } catch (error) {
-        ElMessage.error(typeof error === 'string' ? error : JSON.stringify(error))
-        return false
-    }
+	try {
+		const {
+			file,
+			file: { uid }
+		} = config
+		const point = file.name.lastIndexOf('.')
+		const ext = file.name.substr(point)
+		const fileName = file.name.substring(0, point)
+		const date = new Date()
+		const curDate = `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`
+		const path = `/${curDate}/${props.originName ? fileName : v4().replace(/-/g, '')}.${ext}`
+		return await client.put(path, file)
+	} catch (error) {
+		ElMessage.error(typeof error === 'string' ? error : JSON.stringify(error))
+		return false
+	}
 }
 ```
 
@@ -236,21 +228,21 @@ const uploadPool = ref<string[]>([])
 const selectFileLength = ref<number>(0)
 
 const handleBeforeUpload = () => {
-    selectFileLength.value = selectFileLength.value + 1
+	selectFileLength.value = selectFileLength.value + 1
 }
 
 const handleSuccess = (file: any) => {
-    let { url } = file
-    uploadPool.value.push(url)
-    if (upload.value.uploadFiles.find((file: any) => file.status !== 'success')) {
-        return
-    }
-    const value = props.multiple ? [...fileList.value.map(v => v.url), ...uploadPool.value] : url
-    emit('change', value)
-    emit('update:modelValue', value)
-    upload.value.clearFiles()
-    uploadPool.value = []
-    selectFileLength.value = 0
+	let { url } = file
+	uploadPool.value.push(url)
+	if (upload.value.uploadFiles.find((file: any) => file.status !== 'success')) {
+		return
+	}
+	const value = props.multiple ? [...fileList.value.map(v => v.url), ...uploadPool.value] : url
+	emit('change', value)
+	emit('update:modelValue', value)
+	upload.value.clearFiles()
+	uploadPool.value = []
+	selectFileLength.value = 0
 }
 ```
 
@@ -262,26 +254,26 @@ element-plus 2.0.0 版本后 el-upload 实例不返回 uploadFiles 了，所以�
 
 ```typescript
 watch(
-    () => props.drag,
-    val => {
-        if (val && props.limit > 1) rowDrag()
-    },
-    { immediate: true }
+	() => props.drag,
+	val => {
+		if (val && props.limit > 1) rowDrag()
+	},
+	{ immediate: true }
 )
 
 const rowDrag = () => {
-    nextTick(() => {
-        const el = upload.value.$el.querySelector('.el-upload-list')
-        Sortable.create(el, {
-            onEnd: ({ newIndex, oldIndex }: any) => {
-                fileList.value.splice(newIndex, 0, fileList.value.splice(oldIndex, 1)[0])
-                const cp = [...fileList.value]
-                const value = cp.map(t => t.url)
-                emit('change', value)
-                emit('update:modelValue', value)
-            }
-        })
-    })
+	nextTick(() => {
+		const el = upload.value.$el.querySelector('.el-upload-list')
+		Sortable.create(el, {
+			onEnd: ({ newIndex, oldIndex }: any) => {
+				fileList.value.splice(newIndex, 0, fileList.value.splice(oldIndex, 1)[0])
+				const cp = [...fileList.value]
+				const value = cp.map(t => t.url)
+				emit('change', value)
+				emit('update:modelValue', value)
+			}
+		})
+	})
 }
 ```
 

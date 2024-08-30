@@ -11,8 +11,8 @@ categories:
 
 ### 效果图
 
-![image](https://monster.aiur.site/%E5%BE%AE%E4%BF%A1%E6%88%AA%E5%9B%BE_20230112163151.png)
-![Image](https://monster.aiur.site/%E5%BE%AE%E4%BF%A1%E6%88%AA%E5%9B%BE_20230112163204.png)
+![image](https://s2.loli.net/2024/08/30/t4RwirHAhCDPufy.jpg)
+![Image](https://s2.loli.net/2024/08/30/j8Rizr1JqAbU9Cw.jpg)
 
 ### 组件代码
 
@@ -20,38 +20,34 @@ categories:
 
 ```html
 <template>
-    <div
-        ref="MessageBoxRef"
-        v-show="visible"
-        class="message-mask"
-        :class="{ [`${customClass}`]: true }"
-        :style="{ zIndex: zIndex }"
-        @click.self="handleClickModal"
-    >
-        <div class="box center">
-            <div class="content">
-                <h1 class="title">{{ title }}</h1>
-                <p class="message">{{ message }}</p>
-            </div>
-            <div class="btn__group">
-                <button
-                    v-if="showCancalButton"
-                    class="btn btn__cancal"
-                    :style="{ '--color': cancalColor }"
-                    @click="handleAction('cancel')"
-                >
-                    {{ cancalText }}
-                </button>
-                <button
-                    class="btn btn__confirm"
-                    :style="{ '--color': confirmColor }"
-                    @click="handleAction('confirm')"
-                >
-                    {{ confirmText }}
-                </button>
-            </div>
-        </div>
-    </div>
+	<div
+		ref="MessageBoxRef"
+		v-show="visible"
+		class="message-mask"
+		:class="{ [`${customClass}`]: true }"
+		:style="{ zIndex: zIndex }"
+		@click.self="handleClickModal"
+	>
+		<div class="box center">
+			<div class="content">
+				<h1 class="title">{{ title }}</h1>
+				<p class="message">{{ message }}</p>
+			</div>
+			<div class="btn__group">
+				<button
+					v-if="showCancalButton"
+					class="btn btn__cancal"
+					:style="{ '--color': cancalColor }"
+					@click="handleAction('cancel')"
+				>
+					{{ cancalText }}
+				</button>
+				<button class="btn btn__confirm" :style="{ '--color': confirmColor }" @click="handleAction('confirm')">
+					{{ confirmText }}
+				</button>
+			</div>
+		</div>
+	</div>
 </template>
 ```
 
@@ -61,56 +57,56 @@ categories:
 
 ```javascript
 const props = defineProps({
-    title: {
-        // 标题
-        type: String,
-        default: () => ''
-    },
-    message: {
-        // 提示
-        type: String,
-        default: () => ''
-    },
-    confirmText: {
-        // 确认按钮文案
-        type: String,
-        default: () => '确认'
-    },
-    cancalText: {
-        // 取消按钮文案
-        type: String,
-        default: () => '取消'
-    },
-    confirmColor: {
-        // 确认按钮颜色
-        type: String,
-        default: () => '#6a7fdb'
-    },
-    cancalColor: {
-        // 取消按钮颜色
-        type: String,
-        default: () => ''
-    },
-    closeOnClickModal: {
-        // 是否点击遮罩层关闭
-        type: Boolean,
-        default: () => true
-    },
-    customClass: {
-        // 自定义class
-        type: String,
-        default: () => ''
-    },
-    showCancalButton: {
-        // 是否显示取消按钮
-        type: Boolean,
-        default: () => true
-    },
-    useAnimation: {
-        // 是否使用动画
-        type: Boolean,
-        default: () => true
-    }
+	title: {
+		// 标题
+		type: String,
+		default: () => ''
+	},
+	message: {
+		// 提示
+		type: String,
+		default: () => ''
+	},
+	confirmText: {
+		// 确认按钮文案
+		type: String,
+		default: () => '确认'
+	},
+	cancalText: {
+		// 取消按钮文案
+		type: String,
+		default: () => '取消'
+	},
+	confirmColor: {
+		// 确认按钮颜色
+		type: String,
+		default: () => '#6a7fdb'
+	},
+	cancalColor: {
+		// 取消按钮颜色
+		type: String,
+		default: () => ''
+	},
+	closeOnClickModal: {
+		// 是否点击遮罩层关闭
+		type: Boolean,
+		default: () => true
+	},
+	customClass: {
+		// 自定义class
+		type: String,
+		default: () => ''
+	},
+	showCancalButton: {
+		// 是否显示取消按钮
+		type: Boolean,
+		default: () => true
+	},
+	useAnimation: {
+		// 是否使用动画
+		type: Boolean,
+		default: () => true
+	}
 })
 ```
 
@@ -123,14 +119,14 @@ import { ref, computed } from 'vue'
 const initialZIndex = 2e3
 const zIndex = ref(0)
 const useZIndex = () => {
-    const currentZIndex = computed(() => initialZIndex + zIndex.value)
-    const nextZIndex = () => {
-        zIndex.value++
-        return currentZIndex.value
-    }
-    return {
-        nextZIndex
-    }
+	const currentZIndex = computed(() => initialZIndex + zIndex.value)
+	const nextZIndex = () => {
+		zIndex.value++
+		return currentZIndex.value
+	}
+	return {
+		nextZIndex
+	}
 }
 
 export default useZIndex
@@ -145,22 +141,22 @@ const zIndex = ref(0)
 const { nextZIndex } = useZIndex()
 
 const hideBody = () => {
-    document.body.classList.add('message-overflow-hidden')
+	document.body.classList.add('message-overflow-hidden')
 }
 
 const fadeIn = async () => {
-    return new Promise(resolve => {
-        MessageBoxRef?.value.classList.add('fade-in')
-        setTimeout(() => {
-            MessageBoxRef?.value.classList.remove('fade-in')
-            resolve(null)
-        }, 300)
-    })
+	return new Promise(resolve => {
+		MessageBoxRef?.value.classList.add('fade-in')
+		setTimeout(() => {
+			MessageBoxRef?.value.classList.remove('fade-in')
+			resolve(null)
+		}, 300)
+	})
 }
 
 onMounted(() => {
-    zIndex.value = nextZIndex()
-    nextTick().then(() => ((visible.value = true), hideBody(), props.useAnimation && fadeIn()))
+	zIndex.value = nextZIndex()
+	nextTick().then(() => ((visible.value = true), hideBody(), props.useAnimation && fadeIn()))
 })
 ```
 
@@ -172,36 +168,36 @@ onMounted(() => {
 
 ```javascript
 const fadeOut = async () => {
-    return new Promise(resolve => {
-        MessageBoxRef.value?.classList.add('fade-out')
-        setTimeout(() => {
-            MessageBoxRef.value?.classList.remove('fade-out')
-            resolve(null)
-        }, 250)
-    })
+	return new Promise(resolve => {
+		MessageBoxRef.value?.classList.add('fade-out')
+		setTimeout(() => {
+			MessageBoxRef.value?.classList.remove('fade-out')
+			resolve(null)
+		}, 250)
+	})
 }
 
 const showBody = () => {
-    document.body.classList.remove('message-overflow-hidden')
+	document.body.classList.remove('message-overflow-hidden')
 }
 
 const handleClickModal = () => {
-    if (props.closeOnClickModal) handleAction('close')
+	if (props.closeOnClickModal) handleAction('close')
 }
 
 const handleAction = (type: any) => {
-    action.value = type
-    doClose()
+	action.value = type
+	doClose()
 }
 
 const doClose = async () => {
-    if (!visible.value) return
-    if (props.useAnimation) await fadeOut()
-    visible.value = false
-    showBody()
-    nextTick(() => {
-        if (action.value) emits('action', action.value)
-    })
+	if (!visible.value) return
+	if (props.useAnimation) await fadeOut()
+	visible.value = false
+	showBody()
+	nextTick(() => {
+		if (action.value) emits('action', action.value)
+	})
 }
 ```
 
@@ -221,58 +217,58 @@ import { MessageOptions, ActionType } from './types'
 const messageInstance = new Map()
 
 const getContainer = (): HTMLElement => {
-    return document.createElement('div')
+	return document.createElement('div')
 }
 
 const initInstance = (props: MessageOptions, container: HTMLElement) => {
-    const vnode = createVNode(Message, props)
-    render(vnode, container)
-    document.body.appendChild(container.firstElementChild)
-    return vnode.component
+	const vnode = createVNode(Message, props)
+	render(vnode, container)
+	document.body.appendChild(container.firstElementChild)
+	return vnode.component
 }
 
 const showMessage = (options: MessageOptions) => {
-    const container = getContainer()
+	const container = getContainer()
 
-    options.onAction = (action: ActionType) => {
-        const curInstance = messageInstance.get(vm)
-        setTimeout(() => {
-            render(null, container)
-            messageInstance.delete(vm)
-        }, 0)
-        switch (action) {
-            case 'confirm':
-                return curInstance.resolve(curInstance.resolve)
-            case 'cancel':
-                return curInstance.reject('cancal')
-            case 'close':
-                return curInstance.reject('close')
-        }
-    }
+	options.onAction = (action: ActionType) => {
+		const curInstance = messageInstance.get(vm)
+		setTimeout(() => {
+			render(null, container)
+			messageInstance.delete(vm)
+		}, 0)
+		switch (action) {
+			case 'confirm':
+				return curInstance.resolve(curInstance.resolve)
+			case 'cancel':
+				return curInstance.reject('cancal')
+			case 'close':
+				return curInstance.reject('close')
+		}
+	}
 
-    const instance = initInstance(options, container)
+	const instance = initInstance(options, container)
 
-    const vm = instance.proxy
+	const vm = instance.proxy
 
-    for (const prop in options) {
-        if (options.hasOwnProperty(prop) && !vm.$props.hasOwnProperty(prop)) {
-            vm[prop] = options[prop]
-        }
-    }
+	for (const prop in options) {
+		if (options.hasOwnProperty(prop) && !vm.$props.hasOwnProperty(prop)) {
+			vm[prop] = options[prop]
+		}
+	}
 
-    return vm
+	return vm
 }
 
 const MessageBox: MessageBoxInstance = async (options: MessageOptions): Promise => {
-    const container = document.createElement('div')
-    return new Promise((resolve, reject) => {
-        const vm = showMessage(options)
-        messageInstance.set(vm, {
-            options,
-            resolve,
-            reject
-        })
-    })
+	const container = document.createElement('div')
+	return new Promise((resolve, reject) => {
+		const vm = showMessage(options)
+		messageInstance.set(vm, {
+			options,
+			resolve,
+			reject
+		})
+	})
 }
 ```
 
@@ -285,32 +281,32 @@ onAction 方法可以接收组件通过 defineEmits 定义的事件。从 Map �
 ```typescript
 const MESSAGE_BOX_FUNC: string[] = ['confirm', 'alert']
 const MESSAGE_INIT_PROPS = {
-    confirm: { showCancalButton: true },
-    alert: { showCancalButton: false, closeOnClickModal: false }
+	confirm: { showCancalButton: true },
+	alert: { showCancalButton: false, closeOnClickModal: false }
 }
 
 const MessageBoxInit: MessageBoxInstance = (type: string) => {
-    return (title: string, message: string, options: MessageOptions) => {
-        return MessageBox({
-            title,
-            message,
-            type,
-            ...options,
-            ...MESSAGE_INIT_PROPS[type]
-        })
-    }
+	return (title: string, message: string, options: MessageOptions) => {
+		return MessageBox({
+			title,
+			message,
+			type,
+			...options,
+			...MESSAGE_INIT_PROPS[type]
+		})
+	}
 }
 
 MESSAGE_BOX_FUNC.forEach((type: string) => {
-    MessageBox[type] = MessageBoxInit(type)
+	MessageBox[type] = MessageBoxInit(type)
 })
 
 MessageBox.close = () => {
-    messageInstance.forEach((_, vm) => {
-        vm.doClose()
-    })
+	messageInstance.forEach((_, vm) => {
+		vm.doClose()
+	})
 
-    messageInstance.clear()
+	messageInstance.clear()
 }
 ```
 
@@ -320,28 +316,29 @@ MESSAGE_BOX_FUNC 定义了两个对话框类型，MESSAGE_INIT_PROPS 定义他�
 
 ```vue
 <template>
-    <button @click="handleConfirm">点我试试Confirm</button>
-    <button @click="handleAlert">点我试试Alert</button>
+	<button @click="handleConfirm">点我试试Confirm</button>
+	<button @click="handleAlert">点我试试Alert</button>
 </template>
 <script setup lang="ts">
+import Message from './XX/MessageBox'
 const handleConfirm = () => {
-    Message.confirm('标题', '内容')
-        .then(_ => { 
-            // do something 
-        })
-        .catch(_ => { 
-            // do something 
-        })
+	Message.confirm('标题', '内容')
+		.then(_ => {
+			// do something
+		})
+		.catch(_ => {
+			// do something
+		})
 }
 
 const handleAlert = () => {
-    Message.alert('标题', '内容')
-        .then(_ => {
-            // do something 
-        })
-        .catch(_ => {
-            // do something 
-        })
+	Message.alert('标题', '内容')
+		.then(_ => {
+			// do something
+		})
+		.catch(_ => {
+			// do something
+		})
 }
 </script>
 ```
@@ -357,18 +354,18 @@ import { MessageOptions, ActionType } from './types'
 const messageInstance = new Map()
 
 const getContainer = (): HTMLElement => {
-    return document.createElement('div')
+return document.createElement('div')
 }
 
 const initInstance = (props: MessageOptions, container: HTMLElement) => {
-    const vnode = createVNode(Message, props)
-    render(vnode, container)
-    document.body.appendChild(container.firstElementChild)
-    return vnode.component
+const vnode = createVNode(Message, props)
+render(vnode, container)
+document.body.appendChild(container.firstElementChild)
+return vnode.component
 }
 
 const showMessage = (options: MessageOptions) => {
-    const container = getContainer()
+const container = getContainer()
 
     options.onAction = (action: ActionType) => {
         const curInstance = messageInstance.get(vm)
@@ -397,48 +394,50 @@ const showMessage = (options: MessageOptions) => {
     }
 
     return vm
+
 }
 
 const MessageBox: MessageBoxInstance = async (options: MessageOptions): Promise => {
-    const container = document.createElement('div')
-    return new Promise((resolve, reject) => {
-        const vm = showMessage(options)
-        messageInstance.set(vm, {
-            options,
-            resolve,
-            reject
-        })
-    })
+const container = document.createElement('div')
+return new Promise((resolve, reject) => {
+const vm = showMessage(options)
+messageInstance.set(vm, {
+options,
+resolve,
+reject
+})
+})
 }
 
 const MESSAGE_BOX_FUNC: string[] = ['confirm', 'alert']
 const MESSAGE_INIT_PROPS = {
-    confirm: { showCancalButton: true },
-    alert: { showCancalButton: false, closeOnClickModal: false }
+confirm: { showCancalButton: true },
+alert: { showCancalButton: false, closeOnClickModal: false }
 }
 
 const MessageBoxInit: MessageBoxInstance = (type: string) => {
-    return (title: string, message: string, options: MessageOptions) => {
-        return MessageBox({
-            title,
-            message,
-            type,
-            ...options,
-            ...MESSAGE_INIT_PROPS[type]
-        })
-    }
+return (title: string, message: string, options: MessageOptions) => {
+return MessageBox({
+title,
+message,
+type,
+...options,
+...MESSAGE_INIT_PROPS[type]
+})
+}
 }
 
 MESSAGE_BOX_FUNC.forEach((type: string) => {
-    MessageBox[type] = MessageBoxInit(type)
+MessageBox[type] = MessageBoxInit(type)
 })
 
 MessageBox.close = () => {
-    messageInstance.forEach((_, vm) => {
-        vm.doClose()
-    })
+messageInstance.forEach((\_, vm) => {
+vm.doClose()
+})
 
     messageInstance.clear()
+
 }
 
 export default MessageBox
@@ -729,24 +728,24 @@ button {
 {{< code language="typescript" title="types.ts" id="2" expand="Show" collapse="Hide" isCollapsed="true" >}}
 
 export interface MessageOptions {
-  title?: String,
-  message?: String,
-  confirmText?: String;
-  cancalText?: String;
-  confirmColor?: String;
-  cancalColor?: String;
-  closeOnClickModal?: Boolean;
-  customClass?: String,
-  showCancalButton?: Boolean,
-  useAnimation?: Boolean,
+title?: String,
+message?: String,
+confirmText?: String;
+cancalText?: String;
+confirmColor?: String;
+cancalColor?: String;
+closeOnClickModal?: Boolean;
+customClass?: String,
+showCancalButton?: Boolean,
+useAnimation?: Boolean,
 }
 
 export type ActionType = 'confirm' | 'cancel' | 'close';
 
 export interface MessageBoxInstance {
-  close: (): void;
-  confirm: (reslove: function (params: string): void, reject: function (params: string): void)
-  alert: (reslove: function (params: string): void)
+close: (): void;
+confirm: (reslove: function (params: string): void, reject: function (params: string): void)
+alert: (reslove: function (params: string): void)
 }
 
 {{< /code >}}
@@ -758,14 +757,14 @@ import { ref, computed } from 'vue'
 const initialZIndex = 2e3
 const zIndex = ref<number>(0)
 const useZIndex = () => {
-    const currentZIndex = computed(() => initialZIndex + zIndex.value)
-    const nextZIndex = () => {
-        zIndex.value++
-        return currentZIndex.value
-    }
-    return {
-        nextZIndex
-    }
+const currentZIndex = computed(() => initialZIndex + zIndex.value)
+const nextZIndex = () => {
+zIndex.value++
+return currentZIndex.value
+}
+return {
+nextZIndex
+}
 }
 
 export default useZIndex

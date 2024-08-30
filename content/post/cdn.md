@@ -1,14 +1,15 @@
 ---
-title: "jsdelivr + github 做CDN加速"
+title: 'jsdelivr + github 做CDN加速'
 date: 2022-06-28T15:00:31+08:00
+draft: true
 description: 前端为了减小项目体积，通常会采用CDN的方式引用资源来达到这个目的，提高加载速度的同时也减小项目体积。现在很多云服务也提供了CDN服务，我们在这里通过jsdelive这个开源CDN服务来制作自己的CDN库
 tags:
-- Github
+    - Github
 ---
 
-前端为了减小项目体积，通常会采用CDN的方式引用资源来达到这个目的，提高加载速度的同时也减小项目体积。现在很多云服务也提供了CDN服务，我们在这里通过jsdelive这个开源CDN服务来制作自己的CDN库
+前端为了减小项目体积，通常会采用 CDN 的方式引用资源来达到这个目的，提高加载速度的同时也减小项目体积。现在很多云服务也提供了 CDN 服务，我们在这里通过 jsdelive 这个开源 CDN 服务来制作自己的 CDN 库
 
-首先我们要先创建一个github仓库
+首先我们要先创建一个 github 仓库
 
 ![image](https://monster.aiur.site/%E5%BE%AE%E4%BF%A1%E6%88%AA%E5%9B%BE_20220628151229.png)
 

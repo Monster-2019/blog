@@ -7,6 +7,10 @@ tags:
     - AMD
 ---
 
+**重要提醒：AMD 驱动必须 24.3.1 版本及以下**
+
+---
+
 Hyper-V 和 VM 相比就差在 GPU 上，VM 在 GPU 的加持下，目前依旧是更多人的虚拟机首选。Hyper-V 在直通 GPU 后，性能与 VM 差距更小，并且 Hyper-V 的原生性，更便捷。
 
 #### 先在虚拟机中挂载 GPU 设备
@@ -32,7 +36,7 @@ Set-VM -HighMemoryMappedIoSpace 32GB -VMName $vm
 我们在完成第一步时，虽然我们在设备管理器中已经能够看到 GPU，但它还缺少驱动文件所以无法工作。我们需要的文件如下：
 
 ```
-# C:\Users\XXXX\Desktop\SysWOW64\.
+# C:\Windows\SysWOW64\.
 │ amdadlx32.dll
 │ amdave32.dll
 │ amdgfxinfo32.dll
@@ -57,7 +61,7 @@ Set-VM -HighMemoryMappedIoSpace 32GB -VMName $vm
 ```
 
 ```
-C:\Users\DX\Desktop\System32\.
+# C:\Windows\System32\.
 │ amdadlx64.dll
 │ amdave64.dll
 │ amdgfxinfo64.dll
@@ -94,10 +98,10 @@ C:\Users\DX\Desktop\System32\.
 ├─AMD #Dir
 └─HostDriverStore
     └─FileRepository
-        └─u0398226.inf_amd64_c5d9584367e4b5ff #Dir
+        └─uXXXXXXX.inf_amd64_c5d9584367e4b5ff #Dir
 ```
 
-上述名称就是相关目录的相关驱动文件，基本上都是新增的。需要注意的是 HostDriverStore 和 FileRepository 文件夹需要自己创建，u0398226.inf_amd64_c5d9584367e4b5ff 可以在设备管理器的驱动文件详情里找到的 u 开头类似的文件，将它放在刚创建的目录里。AMD 和 u0398226.inf_amd64_c5d9584367e4b5ff 都不需要修改什么。将这些文件移动到虚拟机里同样的目录下即可。
+上述名称就是相关目录的相关驱动文件，基本上都是新增的。需要注意的是 HostDriverStore 和 FileRepository 文件夹需要自己创建，uXXXXXXX.inf_amd64_c5d9584367e4b5ff 可以在设备管理器的驱动文件详情里找到的 u 开头类似的文件，将它放在刚创建的目录里。AMD 和 uXXXXXXX.inf_amd64_c5d9584367e4b5ff 都不需要修改什么。将这些文件移动到虚拟机里同样的目录下即可。
 
 完成上述步骤后重启就可以从设备管理器中看到正常工作了。在 Direct X 中也是正常的。
 
