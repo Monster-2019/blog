@@ -5,9 +5,9 @@ description: VsCode配置保存自动格式化Vue文件
 tags:
     - VsCode
     - Vue
-	- ESLint
-	- Prettier
-	- Vetur
+    - ESLint
+    - Prettier
+    - Vetur
 ---
 
 VsCode 配置保存自动格式化 Vue 文件
