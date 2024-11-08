@@ -2,9 +2,12 @@
 title: 'FCM 迁移到新 V1 API'
 date: 2024-09-01T11:35:41+08:00
 description: 'FCM 从旧 API 迁移到新 V1 API'
-tags:
+categories:
+    - 后端开发
     - Firebase
-    - Notification
+tags:
+    - Firebase Cloud Messaging (FCM)
+    - Node.js
 ---
 
 从 2024 年 6 月 20 日之后就无法使用旧版的 FCM API 了，必须迁移到 V1 版本才能使用，今天介绍国内如何迁移到 V1 版本。

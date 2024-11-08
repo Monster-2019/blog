@@ -3,11 +3,17 @@ title: Vue项目格式化
 date: 2022-05-25T18:16:27+08:00
 description: VsCode配置保存自动格式化Vue文件
 tags:
-- VsCode
-- Vue
+    - VsCode
+    - Vue
+	- ESLint
+	- Prettier
+	- Vetur
 ---
-VsCode配置保存自动格式化Vue文件
+
+VsCode 配置保存自动格式化 Vue 文件
+
 <!--more-->
+
 ```
 {
   // 配置vscode默认使用bash控制台

@@ -2,10 +2,14 @@
 title: 'Windows 10 编译 PaddleOCR DLL'
 date: 2023-09-28T17:20:00+08:00
 description: 在Windows 10平台将Paddle OCR编译成DLL供Python调用
+categories:
+    - PaddleOCR
+    - OCR
 tags:
     - PaddleOCR
-    - C++
     - OCR
+    - Windows编译
+    - DLL
 ---
 
 pip 虽然提供了 PaddleOCR 安装包。但在打包使用 PaddleOCR 的程序时，最终生成的程序会因为依赖过多等导致程序体积过大，并且不方便移植，因此通过 DLL 的方式调用 ocr，可以减少程序最终大小。还可以方便其他语言调用 ocr。

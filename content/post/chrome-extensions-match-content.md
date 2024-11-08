@@ -2,6 +2,8 @@
 title: 'Chrome Extensions在指定路由才注入执行content.js'
 date: 2024-07-01T22:30:28+08:00
 description: Chrome Extensions只有在指定子路由的时候才注入执行content.js，而不是在访问matches域名时注入执行
+categories:
+    - 前端开发
 tags:
     - Chrome Extensions
     - SPA
@@ -17,11 +19,11 @@ tags:
 
 ```json
 {
-    "permissions": ["webNavigation", "scripting"],
-    "host_permissions": ["https://*.xxx.com/*"],
-    "background": {
-        "service_worker": "background.js"
-    }
+	"permissions": ["webNavigation", "scripting"],
+	"host_permissions": ["https://*.xxx.com/*"],
+	"background": {
+		"service_worker": "background.js"
+	}
 }
 ```
 
@@ -33,29 +35,29 @@ tags:
 
 ```javascript
 chrome.webNavigation.onCompleted.addListener(
-    function (details) {
-        console.log('onCompleted event detected:', details.url)
-        chrome.scripting.executeScript({
-            target: { tabId: details.tabId },
-            files: ['content.js']
-        })
-    },
-    {
-        url: [{ urlMatches: 'https://www.xxx.com/xxx.*' }]
-    }
+	function (details) {
+		console.log('onCompleted event detected:', details.url)
+		chrome.scripting.executeScript({
+			target: { tabId: details.tabId },
+			files: ['content.js']
+		})
+	},
+	{
+		url: [{ urlMatches: 'https://www.xxx.com/xxx.*' }]
+	}
 )
 
 chrome.webNavigation.onHistoryStateUpdated.addListener(
-    function (details) {
-        console.log('onHistoryStateUpdated event detected:', details.url)
-        chrome.scripting.executeScript({
-            target: { tabId: details.tabId },
-            files: ['content.js']
-        })
-    },
-    {
-        url: [{ urlMatches: 'https://www.xxx.com/xxx.*' }]
-    }
+	function (details) {
+		console.log('onHistoryStateUpdated event detected:', details.url)
+		chrome.scripting.executeScript({
+			target: { tabId: details.tabId },
+			files: ['content.js']
+		})
+	},
+	{
+		url: [{ urlMatches: 'https://www.xxx.com/xxx.*' }]
+	}
 )
 ```
 

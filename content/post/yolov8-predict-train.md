@@ -2,8 +2,13 @@
 title: 'Yolov8 自定义检测模型训练'
 date: 2023-08-21T20:39:08+08:00
 description: Yolov8 训练自己的检测模型教程
+categories:
+    - 目标检测
+    - 计算机视觉
 tags:
     - Yolov8
+    - 目标检测
+    - Python
 ---
 
 Yolo 检测已经在很多领域得到了广泛应用，如今已经更新到了 Yolov8 版本。针对某些小众领域的检测不准确，接下来我们训练自己的模型。

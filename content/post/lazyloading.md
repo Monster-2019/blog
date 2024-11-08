@@ -2,8 +2,14 @@
 title: 'JavaScript实现懒加载图片、动画'
 date: 2022-10-10T16:25:50+08:00
 description: 懒加载是前端一种常见的优化手段，下面将介绍两种常见的懒加载实现
+categories:
+    - 前端开发
+    - 前端优化
+    - JavaScript
 tags:
     - JavaScript
+    - 懒加载
+    - 性能优化
 ---
 
 懒加载是前端一种常见的优化手段，下面将介绍两种常见的懒加载实现
@@ -15,27 +21,27 @@ tags:
 ```javascript
 const innerHeight = window.innerHeight
 const debounce = (func, delay = 200) => {
-    let timer
-    return function (...args) {
-        const context = this
-        clearTimeout(timer)
-        timer = setTimeout(() => {
-            func.apply(context, args)
-        }, delay)
-    }
+	let timer
+	return function (...args) {
+		const context = this
+		clearTimeout(timer)
+		timer = setTimeout(() => {
+			func.apply(context, args)
+		}, delay)
+	}
 }
 const lazyLoading = () => {
-    let imgs = [...document.querySelectorAll('img')]
-    imgs.forEach(el => {
-        const { top, height } = el.getBoundingClientRect()
-        if (innerHeight - top > 0) {
-            el.classList.add('animation')
-            el.src = el.dataset.src
-        }
-        if (top + height < 0 || top > innerHeight) {
-            el.classList.remove('animation')
-        }
-    })
+	let imgs = [...document.querySelectorAll('img')]
+	imgs.forEach(el => {
+		const { top, height } = el.getBoundingClientRect()
+		if (innerHeight - top > 0) {
+			el.classList.add('animation')
+			el.src = el.dataset.src
+		}
+		if (top + height < 0 || top > innerHeight) {
+			el.classList.remove('animation')
+		}
+	})
 }
 window.addEventListener('scroll', debounce(lazyLoading, 300), false)
 window.onload = lazyLoading
@@ -52,22 +58,22 @@ IntersectionObserver 不支持 IE 浏览器，也不支持一些低版本的浏�
 ```javascript
 let observer
 const loadImage = entries => {
-    entries.forEach(entry => {
-        if (entry.intersectionRatio > 0) {
-            const { src } = entry.target.dataset
-            entry.target.src = src
-            entry.target.classList.add('animation')
-        } else {
-            entry.target.classList.remove('animation')
-        }
-    })
+	entries.forEach(entry => {
+		if (entry.intersectionRatio > 0) {
+			const { src } = entry.target.dataset
+			entry.target.src = src
+			entry.target.classList.add('animation')
+		} else {
+			entry.target.classList.remove('animation')
+		}
+	})
 }
 window.onload = () => {
-    observer = new IntersectionObserver(loadImage)
-    let imgs = [...document.querySelectorAll('img')]
-    imgs.forEach(el => {
-        observer.observe(el)
-    })
+	observer = new IntersectionObserver(loadImage)
+	let imgs = [...document.querySelectorAll('img')]
+	imgs.forEach(el => {
+		observer.observe(el)
+	})
 }
 ```
 

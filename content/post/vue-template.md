@@ -3,33 +3,39 @@ title: Vue-cli3项目模板
 date: 2022-05-25T18:16:27+08:00
 categories: Vue
 description: Webpack现在是Vue项目打包的首选，也是vue-cli3脚手架的默认打包工具，在此分享出自己基于Vue-cli3创建的项目基础配置，为大家解决webpack配置复杂问题。
-tags: 
-- Vue
+tags:
+    - Vue
+    - Webpack
+    - Git hooks
 ---
-Webpack现在是Vue项目打包的首选，也是vue-cli3脚手架的默认打包工具，在此分享出自己基于Vue-cli3创建的项目基础配置，为大家解决webpack配置复杂问题。
+
+Webpack 现在是 Vue 项目打包的首选，也是 vue-cli3 脚手架的默认打包工具，在此分享出自己基于 Vue-cli3 创建的项目基础配置，为大家解决 webpack 配置复杂问题。
 
 ### 准备工作
 
 #### 创建项目
+
 ```
 $ vue create project-name || vue ui
 ```
 
 #### 安装依赖
+
 ```
 $ npm install
 ```
 
 #### 启动服务
+
 ```
 $ npm run serve
 ```
 
 #### 生产环境打包
+
 ```
 $ npm run build
 ```
-
 
 <!--more-->
 
@@ -38,7 +44,7 @@ $ npm run build
     ├── public                      静态模板资源文件
     ├── src                         项目文件
     ├──|── api                      请求接口
-    ├──|── assets                   静态文件 img 、css 、js    
+    ├──|── assets                   静态文件 img 、css 、js
     ├──|── components               全局组件
     ├──|── filters                  过滤器
     ├──|── local                    i18n翻译
@@ -59,10 +65,10 @@ $ npm run build
     ├── package.json                项目配置文件
     ├── vue.config.js               config 配置文件
 
-
-### vue.config.js配置功能
+### vue.config.js 配置功能
 
 #### 本地代理
+
 ```
 devServer: {
     port: 8080, // 端口号
@@ -75,7 +81,8 @@ devServer: {
 },
 ```
 
-#### configureWebpack开启Gzip压缩
+#### configureWebpack 开启 Gzip 压缩
+
 ```
 configureWebpack: config => {
     config.plugins.push(
@@ -88,7 +95,8 @@ configureWebpack: config => {
 }
 ```
 
-#### cdn配置
+#### cdn 配置
+
 ```
 chainWebpack(config) {
     const cdn = {
@@ -129,6 +137,7 @@ configureWebpack: config => {
 ```
 
 #### 图片压缩
+
 ```
 chainWebpack: config => {
 	config.module
@@ -140,7 +149,8 @@ chainWebpack: config => {
 }
 ```
 
-#### gitHook配置，代码语法检测
+#### gitHook 配置，代码语法检测
+
 ```
 "gitHooks": {
     "pre-commit": "lint-staged"

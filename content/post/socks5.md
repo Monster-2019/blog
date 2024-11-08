@@ -2,9 +2,11 @@
 title: 'Socks5搭建'
 date: 2022-07-01T14:17:09+08:00
 description: Socks5 脚本有很多，我目前使用的是 [danted](https://github.com/Lozy/danted.git)，快速上手，简单易懂
+categories:
+    - Socks5
 tag:
-- Socks5
-- Linux
+    - Socks5
+    - Linux
 ---
 
 Socks5 脚本有很多，我目前使用的是 [danted](https://github.com/Lozy/danted.git)，快速上手，简单易懂
@@ -84,7 +86,7 @@ username 和 password 是用 socks 代理的凭证，如果 username 已经存�
 
 6. 开放端口
 
-进入实例的相关安全组添加入站规则，TCP端口为sockd配置的端口
+进入实例的相关安全组添加入站规则，TCP 端口为 sockd 配置的端口
 ![image](https://monster.aiur.site/%E5%BE%AE%E4%BF%A1%E6%88%AA%E5%9B%BE_20220701150952.png)
 
 7. socks5 连接验证

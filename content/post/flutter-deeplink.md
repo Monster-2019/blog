@@ -2,10 +2,14 @@
 title: 'Flutter 实现 Deeplink'
 date: 2024-09-17T14:03:55+08:00
 description: 'Flutter实现Deeplink，在用户点击时跳转App'
+categories:
+    - 前端开发
+    - Flutter
 tags:
     - Flutter
     - Deeplink
     - go_router
+    - 移动开发
 ---
 
 如今各大厂商的 App 都实现了 Deeplink，Deeplink 带来的好处有很多，比如提高用户体验，提高转化率，跨平台体验，提高曝光度等。接下来通过 go_router 实现 Flutter 的 Deeplink。

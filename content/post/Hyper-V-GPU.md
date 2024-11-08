@@ -2,9 +2,13 @@
 title: 'Hyper-V虚拟机A卡GPU直通'
 date: 2024-05-11T22:26:42+08:00
 description: 将宿主机的GPU挂载到Hyper-V虚拟机上提高虚拟机性能，解决需要GPU使用的场景。
+categories:
+    - 虚拟化
+    - GPU
 tags:
     - Hyper-V
     - AMD
+    - GPU直通
 ---
 
 **重要提醒：AMD 驱动必须 24.3.1 版本及以下**

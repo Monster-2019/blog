@@ -2,9 +2,12 @@
 title: 'Tailwind 生成动态 Animation Delay 实用类'
 date: 2023-08-20T22:04:18+08:00
 description: 通过 Tailwind matchUtilities 函数生成动态 Animation Delay 实用类
+categories:
+    - Tailwind CSS
+    - CSS
 tags:
-    - tailwind
-    - css
+    - Tailwind CSS
+    - CSS
 ---
 
 Tailwind CSS 中默认只有 Transition Delay，但我们的需求是实现 Animation Delay，既然使用了 Tailwind CSS，我们就尽量避免写 style，通过 Tailwind CSS 提供的 matchUtilities 函数实现。
@@ -57,18 +60,18 @@ plugin(
 ```javascript
 // tailwind.config.js
 plugin(
-    // ... PluginCreator
-    {
-        theme: {
-            animationDelay: {
-                100: '100',
-                200: '200',
-                300: '300',
-                400: '400',
-                500: '500'
-            }
-        }
-    }
+	// ... PluginCreator
+	{
+		theme: {
+			animationDelay: {
+				100: '100',
+				200: '200',
+				300: '300',
+				400: '400',
+				500: '500'
+			}
+		}
+	}
 )
 ```
 
@@ -80,39 +83,39 @@ plugin(
 import plugin from 'tailwindcss/plugin'
 
 export default {
-    // ... 其他配置
+	// ... 其他配置
 
-    plugins: [
-        plugin(
-            function ({ matchUtilities, theme }) {
-                matchUtilities(
-                    {
-                        'animation-delay': value => {
-                            return {
-                                'animation-delay': value + 'ms'
-                            }
-                        }
-                    },
-                    {
-                        values: theme('animationDelay')
-                    }
-                )
-            },
-            {
-                theme: {
-                    animationDelay: {
-                        100: '100',
-                        200: '200',
-                        300: '300',
-                        400: '400',
-                        500: '500'
-                    }
-                }
-            }
-        )
-    ]
+	plugins: [
+		plugin(
+			function ({ matchUtilities, theme }) {
+				matchUtilities(
+					{
+						'animation-delay': value => {
+							return {
+								'animation-delay': value + 'ms'
+							}
+						}
+					},
+					{
+						values: theme('animationDelay')
+					}
+				)
+			},
+			{
+				theme: {
+					animationDelay: {
+						100: '100',
+						200: '200',
+						300: '300',
+						400: '400',
+						500: '500'
+					}
+				}
+			}
+		)
+	]
 
-    // ... 其他配置
+	// ... 其他配置
 }
 ```
 
@@ -120,9 +123,9 @@ export default {
 
 ```css
 .animation-delay-300 {
-    animation-delay: 300ms;
+	animation-delay: 300ms;
 }
 .animation-delay-\[600\] {
-    animation-delay: 600ms;
+	animation-delay: 600ms;
 }
 ```

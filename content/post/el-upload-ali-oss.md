@@ -3,8 +3,12 @@ title: 'VUE3 el-upload上传阿里云封装'
 date: 2023-01-10T14:02:49+08:00
 description: 封装el-upload上传到阿里云OSS，开箱即用
 categories:
+    - 前端开发
+tags:
     - Element-Plus
     - Vue3
+    - ali-oss
+    - el-upload
 ---
 
 封装 el-upload 上传到阿里云 OSS，开箱即用。

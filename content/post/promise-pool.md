@@ -3,6 +3,8 @@ title: 'Promise Pool'
 date: 2022-10-18T09:42:51+08:00
 categories: JavaScript
 description: 请求池是非常常见的需求，通常是为了限制并发请求数，或者控制带宽。
+categories:
+    - JavaScript
 tags:
     - JavaScript
     - Promise
@@ -33,4 +35,3 @@ async pool(iterable, concurrency = 10) {
     return Promise.all(ret);
 }
 ```
-

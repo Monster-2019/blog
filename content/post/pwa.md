@@ -2,6 +2,8 @@
 title: '让你的Web支持PWA'
 date: 2022-09-22T14:07:46+08:00
 description: PWA(渐进式Web应用)，将你的web app安装在桌面给你带来原生应用的体验
+categories:
+    - Javascript
 tags:
     - Javascript
     - PWA
@@ -45,43 +47,46 @@ name、icons、start_url、display 字段是必需的，其他可以按自己情
 
 ```html
 <head>
-    ...
-    <link rel="manifest" href="/manifest.webmanifest" />
+	...
+	<link rel="manifest" href="/manifest.webmanifest" />
 </head>
 ```
 
-接下来我们注册Service Worker，在根目录创建registerSW.js，当浏览器支持Service Worker时会注册Service Worker，执行sw.js中的代码
+接下来我们注册 Service Worker，在根目录创建 registerSW.js，当浏览器支持 Service Worker 时会注册 Service Worker，执行 sw.js 中的代码
+
 ```javascript
 // registerSW.js
 if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        console.log('serviceWorker' in navigator)
-        navigator.serviceWorker.register('/sw.js', { scope: '/' })
-    })
+	window.addEventListener('load', () => {
+		console.log('serviceWorker' in navigator)
+		navigator.serviceWorker.register('/sw.js', { scope: '/' })
+	})
 }
 ```
 
-只需要加一行代码捕获fetch请求即可
+只需要加一行代码捕获 fetch 请求即可
+
 ```javascript
 // sw.js
-self.addEventListener('fetch', () => console.log("fetch"));
+self.addEventListener('fetch', () => console.log('fetch'))
 ```
 
-在html中加载registerSW.js
+在 html 中加载 registerSW.js
+
 ```html
 <head>
-    ...
-    <script src="/registerSW.js"></script>
+	...
+	<script src="/registerSW.js"></script>
 </head>
 ```
 
-至此你的web已经支持PWA安装了
+至此你的 web 已经支持 PWA 安装了
 
 ![image](https://monster.aiur.site/20220922173704.png)
 ![image](https://monster.aiur.site/eabb6236ecc7cdd4ca002b4b5d7f8bd1.jpg)
 
-chrome上出现安装图标或者安装应用就是成功了，安装后会在桌面出现设置的图标，跟原生应用一样
+chrome 上出现安装图标或者安装应用就是成功了，安装后会在桌面出现设置的图标，跟原生应用一样
 
 ![image](https://monster.aiur.site/b688108204651278eda8cae7b6564ce1.jpg)
 
-打开应用也和原生应用没有太大区别，Service Worker还有很多功能，可从[Service Worker](https://developer.mozilla.org/zh-CN/docs/Web/API/Service_Worker_API)文档中了解
+打开应用也和原生应用没有太大区别，Service Worker 还有很多功能，可从[Service Worker](https://developer.mozilla.org/zh-CN/docs/Web/API/Service_Worker_API)文档中了解

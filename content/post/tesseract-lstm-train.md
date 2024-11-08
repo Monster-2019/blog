@@ -2,6 +2,9 @@
 title: 'Tesseract 5.0 LSTM 训练、优化字体'
 date: 2023-08-21T13:53:21+08:00
 description: 通过LSTM模型，训练和优化自己的 Tesseract 字体，提高识别率。
+categories:
+    - OCR
+    - LSTM
 tags:
     - Tesseract
     - LSTM

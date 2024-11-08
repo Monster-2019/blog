@@ -2,12 +2,15 @@
 title: '基于Vite + React + TypeScript + TailwindCss 构建React组件'
 date: 2024-07-29T21:06:15+08:00
 description: 基于Vite + React + TypeScript + TailwindCss 构建React组件
+categories:
+    - 前端开发
 tags:
     - Vite
     - React
     - TypeScript
     - Rollup
-    - TailwindCss
+    - Tailwind CSS
+    - npm
 ---
 
 使用 Vite + React + TypeScript + Tailwind CSS 技术栈封装一个 React 组件
@@ -35,21 +38,21 @@ npx tailwindcss init
 // tailwind.config.js
 /** @type {import('tailwindcss').Config} */
 export default {
-    content: ['./src/**/*.{js,ts,jsx,tsx}'],
-    theme: {
-        extend: {}
-    },
-    plugins: []
+	content: ['./src/**/*.{js,ts,jsx,tsx}'],
+	theme: {
+		extend: {}
+	},
+	plugins: []
 }
 ```
 
 ```js
 // postcss.config.js
 export default {
-    plugins: {
-        tailwindcss: {},
-        autoprefixer: {}
-    }
+	plugins: {
+		tailwindcss: {},
+		autoprefixer: {}
+	}
 }
 ```
 
@@ -70,16 +73,16 @@ import { FC } from 'react'
 import './index.css'
 
 export interface MyButtonProps {
-    onClick?: () => void
-    children: string
+	onClick?: () => void
+	children: string
 }
 
 const MyButton: FC<MyButtonProps> = ({ onClick, children }) => {
-    return (
-        <button className="py-4 px-6 bg-blue-500 text-white" onClick={onClick}>
-            {children}
-        </button>
-    )
+	return (
+		<button className="py-4 px-6 bg-blue-500 text-white" onClick={onClick}>
+			{children}
+		</button>
+	)
 }
 
 export default MyButton
@@ -119,28 +122,25 @@ import { resolve } from 'path'
 import dts from 'vite-plugin-dts'
 
 export default defineConfig({
-    build: {
-        lib: {
-            entry: resolve(__dirname, './lib/index.ts'),
-            name: 'react-simple-slide-captcha',
-            formats: ['es'],
-            fileName: format => `index.${format}.js`
-        },
-        rollupOptions: {
-            external: ['react', 'react-dom'],
-            output: {
-                globals: {
-                    react: 'React',
-                    'react-dom': 'ReactDOM'
-                }
-            },
-            plugins: [insertConsoleLog()]
-        }
-    },
-    plugins: [
-        react(),
-        dts({ rollupTypes: true, include: ['./lib'], tsconfigPath: './tsconfig.app.json' })
-    ]
+	build: {
+		lib: {
+			entry: resolve(__dirname, './lib/index.ts'),
+			name: 'react-simple-slide-captcha',
+			formats: ['es'],
+			fileName: format => `index.${format}.js`
+		},
+		rollupOptions: {
+			external: ['react', 'react-dom'],
+			output: {
+				globals: {
+					react: 'React',
+					'react-dom': 'ReactDOM'
+				}
+			},
+			plugins: [insertConsoleLog()]
+		}
+	},
+	plugins: [react(), dts({ rollupTypes: true, include: ['./lib'], tsconfigPath: './tsconfig.app.json' })]
 })
 ```
 
@@ -196,10 +196,10 @@ import MyButton from 'react-button'
 import 'react-button/dist/style.css'
 
 const App = () => {
-    const handleClick = () => {
-        console.log('按钮点击')
-    }
-    return <MyButton onClick={handleClick}>My Button</MyButton>
+	const handleClick = () => {
+		console.log('按钮点击')
+	}
+	return <MyButton onClick={handleClick}>My Button</MyButton>
 }
 
 export default App

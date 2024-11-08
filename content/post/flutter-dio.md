@@ -2,6 +2,9 @@
 title: 'Flutter Dio 请求封装，干净便利的获取数据'
 date: 2024-09-16T21:46:49+08:00
 description: '前端友好的Flutter Dio 请求封装方式，干净便利的获取数据'
+categories:
+    - 前端开发
+    - Flutter
 tags:
     - Flutter
     - Dio

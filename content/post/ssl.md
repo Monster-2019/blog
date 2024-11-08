@@ -3,6 +3,9 @@ title: '使用cloudflare 域名ssl认证'
 date: 2022-06-16T13:51:46+08:00
 draft: true
 description: 首先我们看下HTTP和HTTPS协议的区别
+categories:
+    - HTTPS
+    - Cloudflare
 tags:
     - HTTPS
     - Cloudflare

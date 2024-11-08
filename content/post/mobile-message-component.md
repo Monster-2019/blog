@@ -4,7 +4,11 @@ date: 2023-01-12T16:13:00+08:00
 description: 移动端消息对话框组件封装
 categories:
     - Vue3
-    - Mobile
+    - 移动端
+tags:
+    - 移动端
+    - Vue3 Components
+    - Pormise
 ---
 
 因为要满足 UI 设计，所以直接使用库的 Dialog 需要调整的 style 太多了，还要增加项目大小，因此直接抛弃了 UI 库，自己封装。
