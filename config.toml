@@ -1,7 +1,7 @@
 baseurl = "/"
 languageCode = "zh-cn"
 theme = "hello-friend"
-paginate = 5
+paginate = 10
 defaultContentLanguage = "cn"
 
 
