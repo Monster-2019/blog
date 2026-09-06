@@ -90,6 +90,5 @@ jobs:
           script: |
             set -e
             cd /opt/compose/blog
-            sudo docker compose -f compose.server.yml pull blog
-            sudo docker compose -f compose.server.yml up -d blog
-            sudo docker compose -f compose.server.yml ps blog
+            sudo docker compose pull blog
+            sudo docker compose up -d blog
