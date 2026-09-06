@@ -4,9 +4,6 @@ permissions:
   contents: read
 
 on:
-  push:
-    branches:
-      - master
   pull_request:
     types:
       - opened
@@ -47,20 +44,3 @@ jobs:
 
       - name: "🚀 Build the project"
         run: pnpm run build
-
-  docker:
-    name: Docker image build
-    needs: build
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-
-    steps:
-      - name: "☁️ Checkout repository"
-        uses: actions/checkout@v4
-
-      - name: "🐳 Build Docker image"
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: false
-          tags: monster-cone-blog:ci
