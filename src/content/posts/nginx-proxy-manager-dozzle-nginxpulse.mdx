@@ -1,0 +1,361 @@
+---
+title: "Nginx Proxy Manager 可视化配置 Nginx：搭配 Dozzle 和 NginxPulse 查看日志"
+slug: "nginx-proxy-manager-dozzle-nginxpulse"
+author: "Monster Cone"
+pubDatetime: 2026-09-07T00:00:00+08:00
+tags: ["Nginx", "Nginx Proxy Manager", "Docker", "Dozzle", "NginxPulse", "HTTPS"]
+category: "基础设施"
+description: "基于 Docker Compose 部署 Nginx Proxy Manager、Dozzle 和 NginxPulse，使用 NPM 网页界面可视化配置 Nginx，并分别查看 Docker 日志和 Nginx 访问日志。"
+---
+
+很多 Docker 服务本身只监听容器内部端口。如果希望通过域名访问这些服务，就需要一个统一的入口，把用户请求转发到对应容器。Nginx Proxy Manager（以下简称 NPM）就是这个入口，同时也是一个用于可视化配置 Nginx 的网页管理工具，可以在不手写大量 Nginx 配置的情况下完成域名转发、HTTPS 证书和访问控制。
+
+本文使用下面这组服务作为示例。需要先明确：NPM、Dozzle 和 NginxPulse 的职责不同，Dozzle 和 NginxPulse 不是用来配置 Nginx 的。
+
+- NPM：通过网页界面可视化配置 Nginx，管理反向代理、域名、HTTPS 和访问控制
+- Dozzle：读取 Docker Socket，用于查看 Docker 容器日志
+- NginxPulse：读取 NPM 产生的 Nginx 日志，用于查看访问记录和流量分析
+
+## 1. 请求链路
+
+```text
+管理员 ── http://服务器IP:81 ──> NPM 管理后台
+                                  │
+                                  └── 可视化生成 Nginx 反向代理配置
+
+浏览器 ── 域名 + 80/443 ──> NPM ──> 业务容器
+
+Dozzle ── Docker Socket ──> Docker 容器日志
+NginxPulse <── ./data/logs ── NPM 的 Nginx 访问日志
+```
+
+NPM 的核心作用是配置和运行 Nginx。Dozzle 和 NginxPulse 是独立的日志工具：前者关注 Docker 容器日志，后者关注 Nginx 访问日志。NPM 可以再把它们的网页界面代理到域名下，但这只是为了统一访问入口，并不会改变它们各自的职责。
+
+## 2. Compose 配置说明
+
+整理后的 Compose 文件如下：
+
+```yaml
+services:
+  app:
+    image: "jc21/nginx-proxy-manager:2.15.1"
+    restart: unless-stopped
+    container_name: nginx_manager
+    environment:
+      TZ: "Australia/Brisbane"
+    ports:
+      - "80:80"
+      - "81:81"
+      - "443:443"
+    volumes:
+      - ./data:/data
+      - ./letsencrypt:/etc/letsencrypt
+    networks:
+      - shared-net
+
+  dozzle:
+    image: "docker.m.daocloud.io/amir20/dozzle:latest"
+    container_name: dozzle
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "8888:8080"
+    environment:
+      - TZ=Asia/Shanghai
+    networks:
+      - shared-net
+
+  nginxpulse:
+    image: "docker.1ms.run/magiccoders/nginxpulse:latest"
+    container_name: nginxpulse
+    restart: unless-stopped
+    stop_grace_period: 90s
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TMPDIR: /app/var/nginxpulse_data/tmp
+    volumes:
+      - ./data/logs:/share/logs:ro
+      - ./nginxpulse/data:/app/var/nginxpulse_data
+      - ./nginxpulse/pgdata:/app/var/pgdata
+      - ./nginxpulse/configs:/app/configs
+      - /etc/localtime:/etc/localtime:ro
+    expose:
+      - "8088"
+    networks:
+      - shared-net
+
+networks:
+  shared-net:
+    external: true
+    name: my-shared-network
+```
+
+### NPM 的端口和目录
+
+`80:80` 和 `443:443` 是对外提供 HTTP、HTTPS 服务的端口；`81:81` 是 NPM 管理后台端口。官方配置也采用这三个端口，并将 `/data` 和 `/etc/letsencrypt` 持久化到宿主机。
+
+`./data:/data` 会保存 NPM 的数据库、配置和日志，`./letsencrypt:/etc/letsencrypt` 会保存申请到的证书。删除容器时，这些目录仍然保留，重新创建容器后配置不会丢失。
+
+### Dozzle 的端口和作用
+
+Dozzle 通过 Docker Socket 读取容器日志，在容器内部监听 `8080`，所以 NPM 如果要代理它的网页界面，需要填写 `dozzle` 和 `8080`。`8888:8080` 只是让用户可以直接通过 `服务器IP:8888` 访问 Dozzle。
+
+### NginxPulse 的端口和作用
+
+NginxPulse 使用容器内部的 `8088` 端口，主要用于展示和分析 Nginx 日志。这里使用 `expose`，表示只在 Docker 网络中提供服务，不把 8088 发布到宿主机，因此 NPM 可以访问它，但外部用户不能直接访问 `服务器IP:8088`。
+
+日志目录的映射关系是：
+
+```text
+宿主机 ./data/logs  →  NginxPulse /share/logs
+```
+
+因此在 NginxPulse 初始化向导中，日志目录应该填写 `/share/logs`，而不是 `./data/logs`。NginxPulse 官方文档也要求持久化数据目录、PostgreSQL 目录和配置目录，并提醒检查日志读取权限与时区设置。[NginxPulse Docker 文档](https://hub.docker.com/r/magiccoders/nginxpulse/)
+
+### 外部 Docker 网络
+
+```yaml
+networks:
+  shared-net:
+    external: true
+    name: my-shared-network
+```
+
+`external: true` 表示这个网络由 Compose 之外管理，Compose 不会自动创建它。第一次部署前执行：
+
+```bash
+docker network create my-shared-network
+docker compose up -d
+```
+
+加入同一个网络后，容器可以通过服务名互相访问，所以 NPM 中应该使用 `dozzle` 和 `nginxpulse`，而不是 `localhost`。
+
+## 3. 配置域名解析
+
+假设服务器公网 IP 是 `203.0.113.10`，准备使用以下域名：
+
+```text
+dozzle.example.com  → 203.0.113.10
+pulse.example.com   → 203.0.113.10
+```
+
+在 DNS 服务商处添加两个 A 记录。如果从互联网访问，还要在路由器或云服务器安全组中放行并转发：
+
+```text
+TCP 80  → Docker 服务器
+TCP 443 → Docker 服务器
+```
+
+如果只是内网使用，也可以使用内网 DNS，将两个域名解析到服务器的内网 IP。
+
+## 4. 使用 NPM 可视化添加服务
+
+NPM 的核心工作是在网页中创建代理服务。进入 `Hosts` → `Proxy Hosts` → `Add Proxy Host`，在 `Details` 标签中填写：
+
+![NPM 添加代理服务页面](/static/images/proxy_list.png)
+
+*添加代理服务时填写域名、协议、转发主机和转发端口。*
+
+以 NginxPulse 为例：
+
+```text
+域名：pulse.example.com
+协议：http
+转发主机名 / IP：nginxpulse
+转发端口：8088
+```
+
+以 Dozzle 为例，只需要把转发目标改成：
+
+```text
+转发主机名 / IP：dozzle
+转发端口：8080
+```
+
+这里的 `nginxpulse`、`dozzle` 是 Docker 网络中的服务名。NPM 会根据这些信息生成对应的 Nginx 反向代理配置。`Block Common Exploits` 和 `Websockets Support` 可以根据服务需要开启，实时日志类页面通常建议开启 WebSocket 支持。
+
+## 5. 配置 SSL 和 HTTPS
+
+添加代理服务后，切换到 `SSL` 标签，选择已经申请的证书，或者选择申请新的 Let's Encrypt 证书：
+
+![NPM SSL 配置页面](/static/images/proxy_list_ssl.png)
+
+*在 SSL 标签中选择证书，并按需启用强制 HTTPS 和 HTTP/2。*
+
+常用设置如下：
+
+```text
+SSL 证书：选择与域名匹配的证书
+强制 SSL：开启后，HTTP 请求会跳转到 HTTPS
+HTTP/2 支持：一般可以开启
+HSTS：确认 HTTPS 长期可用后再开启
+```
+
+如果还没有证书，可以在 `SSL Certificates` 中申请 Let's Encrypt 证书。申请证书前，域名必须已经解析到服务器，并且外部 TCP 80 端口能够访问 NPM。证书配置完成后，用户就可以通过 `https://pulse.example.com` 或 `https://dozzle.example.com` 访问服务。
+
+## 6. 使用通信规则要求密码访问
+
+如果某个页面只允许指定用户访问，可以给代理服务绑定通信规则。适合保护 NginxPulse、Dozzle 或其他管理后台。
+
+先进入通信规则的管理页面，创建一个规则，例如命名为 `管理页面`：
+
+![NPM 编辑通信规则页面](/static/images/rule.png)
+
+*通信规则可以设置授权列表和访问规则。*
+
+然后在 `授权列表` 标签中添加用户名和密码。保存通信规则后，回到代理服务的 `Details` 标签，在 `通信规则` 下拉框中选择刚才创建的规则，最后保存代理服务。
+
+![NPM 通信规则授权列表](/static/images/auth_rule.png)
+
+*在授权列表中添加允许访问页面的用户名和密码。密码在界面中会以掩码显示。*
+
+配置完成后，访问该域名时浏览器会弹出用户名和密码对话框，只有授权列表中的账号可以进入页面。
+
+需要注意：
+
+- `满足任意条件` 用于调整多个访问条件的匹配逻辑；只有密码保护需求时，添加授权账号即可。
+- `将认证传递给上游` 通常保持关闭。只有后端服务本身也需要接收 `Authorization` 请求头时才开启。
+- 通信规则保护的是 NPM 代理入口，不会修改 Dozzle 或 NginxPulse 自身的用户系统。
+
+## 7. 可选：用 NPM 代理 Dozzle 网页
+
+下面的配置不是 Dozzle 的日志配置，而是使用 NPM 的可视化界面，为 Dozzle 网页增加一个域名入口。如果不需要域名，也可以直接使用 `http://服务器IP:8888`。
+
+访问 NPM 管理后台：
+
+```text
+http://服务器IP:81
+```
+
+依次进入 `Hosts` → `Proxy Hosts` → `Add Proxy Host`，在 `Details` 标签填写：
+
+```text
+Domain Names: dozzle.example.com
+Scheme: http
+Forward Hostname / IP: dozzle
+Forward Port: 8080
+```
+
+建议勾选：
+
+```text
+Block Common Exploits
+Websockets Support
+```
+
+保存后，可以先访问：
+
+```text
+http://dozzle.example.com
+```
+
+### 为 Dozzle 添加 HTTPS
+
+编辑这个 Proxy Host，进入 `SSL` 标签：
+
+1. 选择 `Request a new SSL Certificate`。
+2. 填写邮箱并同意 Let's Encrypt 条款。
+3. 勾选 `Force SSL`。
+4. 可选勾选 `HTTP/2 Support`。
+5. 保存。
+
+之后通过下面的地址访问：
+
+```text
+https://dozzle.example.com
+```
+
+## 8. 可选：用 NPM 代理 NginxPulse 网页
+
+下面的配置同样只是为 NginxPulse 网页增加域名入口。NginxPulse 的日志来源配置仍然是 `/share/logs`，不是 NPM 的 Proxy Host。
+
+再次进入 `Hosts` → `Proxy Hosts` → `Add Proxy Host`，填写：
+
+```text
+Domain Names: pulse.example.com
+Scheme: http
+Forward Hostname / IP: nginxpulse
+Forward Port: 8088
+```
+
+同样建议启用 `Block Common Exploits` 和 `Websockets Support`，然后在 `SSL` 标签申请证书并启用 `Force SSL`。
+
+最终访问：
+
+```text
+https://pulse.example.com
+```
+
+使用独立子域名通常比使用 `example.com/pulse` 更简单，因为很多管理后台的静态资源、API 和 WebSocket 在子路径下需要额外处理。
+
+## 9. NPM 管理后台是否也要配置域名
+
+可以创建一个 Proxy Host，将请求转发到：
+
+```text
+Forward Hostname / IP: app
+Forward Port: 81
+```
+
+但不建议直接把 NPM 管理后台暴露到公网。更安全的做法是只允许局域网、VPN 或 SSH 隧道访问 `81` 端口，并为管理后台设置强密码和额外访问限制。
+
+## 10. 安全和维护建议
+
+当前配置会直接开放 `81` 和 `8888` 端口。如果服务器有公网 IP，建议：
+
+- 用防火墙限制 `81` 只能从管理 IP 访问。
+- 通过 NPM 域名访问 Dozzle 后，可以移除 `8888:8080`。
+- Dozzle 只需要读取 Docker Socket 时，可以改为：
+
+```yaml
+volumes:
+  - /var/run/docker.sock:/var/run/docker.sock:ro
+```
+
+- 不要长期使用 `latest` 作为生产环境唯一版本标识，升级前先备份 `data`、`letsencrypt` 和 NginxPulse 数据目录。
+- 三个服务最好使用同一个时区。当前 NPM 是 `Australia/Brisbane`，Dozzle 是 `Asia/Shanghai`，NginxPulse 使用宿主机时区，可能导致日志时间不一致。
+
+## 11. 常见问题
+
+### 502 Bad Gateway
+
+检查 NPM 中的目标地址：
+
+```text
+Dozzle：dozzle:8080
+NginxPulse：nginxpulse:8088
+```
+
+并确认三个容器都连接到了 `my-shared-network`：
+
+```bash
+docker network inspect my-shared-network
+docker compose ps
+docker compose logs app
+```
+
+### HTTPS 证书申请失败
+
+检查以下项目：
+
+- DNS 是否已经解析到正确的公网 IP。
+- 外部 TCP 80 是否能访问服务器。
+- 路由器是否把 80 端口转发到 Docker 主机。
+- 服务器上是否有其他程序占用了 80 或 443 端口。
+
+### NginxPulse 没有日志数据
+
+确认：
+
+```text
+NPM 日志目录：./data/logs
+NginxPulse 日志目录：/share/logs
+```
+
+同时检查目录权限、日志格式和时区。NginxPulse 容器内的应用用户必须能够读取日志，并能够写入自己的数据目录。
+
+## 总结
+
+这套部署中，NPM 是核心的 Nginx 可视化配置工具，负责管理域名、HTTPS 和反向代理；Dozzle 专门查看 Docker 容器日志；NginxPulse 专门查看和分析 Nginx 访问日志。只有在希望通过域名访问两个日志工具时，才需要在 NPM 中额外添加 `dozzle:8080` 和 `nginxpulse:8088` 两个 Proxy Host。
