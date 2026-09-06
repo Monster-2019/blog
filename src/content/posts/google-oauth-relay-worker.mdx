@@ -1,0 +1,288 @@
+---
+title: "国内服务器如何通过 Cloudflare Worker 实现 Google 登录"
+slug: "google-oauth-relay-worker"
+author: "Monster Cone"
+pubDatetime: 2026-09-07T00:00:00+08:00
+tags: ["Google OAuth", "Cloudflare Workers", "OAuth 2.0", "部署"]
+category: "后端与部署"
+description: "以我开源的 google-oauth-relay 为例，介绍国内服务器如何通过 Cloudflare Worker 中转 Google 登录所需的后端请求。"
+---
+
+如果业务服务器部署在国内，直接请求 Google 的 Token 和 UserInfo 接口可能不稳定。我的做法是把这两个请求交给 Cloudflare Worker 转发，业务后端只请求 Worker。
+
+[google-oauth-relay](https://github.com/Monster-2019/google-oauth-relay) 是我开源的一个小型中转服务，基于 Hono 和 Cloudflare Workers，专门处理 Google OAuth 的后端请求。
+
+先强调一个必须注意的事项：
+
+> 生产环境必须给 Worker 绑定自己的域名并使用 HTTPS，不要直接使用 `workers.dev` 域名。国内服务器不一定能正常请求 `workers.dev`，这会导致 Google 回调成功后，后端在换取 Token 的环节失败。
+
+## 工作流程
+
+Worker 不代理 Google 登录页面，浏览器仍然需要访问 Google 完成授权。它只负责后端的两次请求：
+
+```text
+浏览器 → 业务后端 → Google 授权页面
+Google → 业务后端回调 code
+业务后端 → 自有域名 Worker → Google Token / UserInfo
+业务后端 → 创建本地登录会话
+```
+
+项目提供以下接口：
+
+| 路由                   | 作用                      |
+| ---------------------- | ------------------------- |
+| `POST /google/token`   | 用授权码换取 Access Token |
+| `GET /google/userinfo` | 获取 Google 用户资料      |
+| `GET /health`          | 健康检查                  |
+
+Token 和 UserInfo 请求使用 HMAC-SHA256 签名，Worker 不保存授权码、Token 或用户信息，也不是一个通用 HTTP 代理。
+
+## 1. 创建 Google OAuth Client
+
+在 Google Cloud Console 中创建 OAuth Client，类型选择 **Web application**。
+
+假设业务域名是 `https://example.com`，回调地址可以是：
+
+```text
+https://example.com/api/auth/google/callback
+```
+
+这个地址要填入 Google OAuth Client 的 Authorized redirect URIs，并且必须与代码中的 `redirect_uri` 完全一致。这里填写的是**业务后端回调地址**，不是 Worker 地址。
+
+登录场景通常使用以下 Scope：
+
+```text
+openid email profile
+```
+
+具体流程可参考 [Google OAuth Web Server 文档](https://developers.google.com/identity/protocols/oauth2/web-server) 和 [Google OpenID Connect 文档](https://developers.google.com/identity/openid-connect/openid-connect)。
+
+## 2. 部署 google-oauth-relay
+
+这是我维护的开源项目，可以直接部署到你自己的 Cloudflare 账号：
+
+```bash
+git clone https://github.com/Monster-2019/google-oauth-relay.git
+cd google-oauth-relay
+pnpm install
+pnpm wrangler login
+pnpm wrangler secret put RELAY_CLIENTS
+```
+
+输入 Secret 时填写调用方 ID 和共享密钥：
+
+```json
+{
+  "web-backend": "replace-with-a-random-secret-at-least-32-characters"
+}
+```
+
+然后部署：
+
+```bash
+pnpm deploy
+```
+
+### 必须绑定自己的域名
+
+部署完成后，在 Cloudflare Dashboard 的 Worker 设置中找到 **Domains & Routes**，为这个 Worker 添加自己的 Custom Domain，例如：
+
+```text
+https://oauth-relay.example.com
+```
+
+然后从国内服务器检查：
+
+```bash
+curl https://oauth-relay.example.com/health
+```
+
+返回 `{"status":"ok"}` 后，再继续接入业务后端。
+
+不要把下面这种地址用于生产环境：
+
+```text
+https://your-worker.your-subdomain.workers.dev
+```
+
+绑定自有域名是本文方案的硬性要求。自有域名不代表可以绕过所有网络限制，但至少避免把业务链路建立在国内服务器可能无法访问的 `workers.dev` 域名上。自定义域名配置可参考 [Cloudflare Workers 文档](https://developers.cloudflare.com/workers/configuration/routing/custom-domains/)。
+
+## 3. 配置业务后端
+
+在国内服务器的后端环境变量中配置：
+
+```dotenv
+GOOGLE_CLIENT_ID=你的_google_client_id
+GOOGLE_CLIENT_SECRET=你的_google_client_secret
+GOOGLE_REDIRECT_URI=https://example.com/api/auth/google/callback
+
+# 这里必须是绑定后的自有域名
+OAUTH_RELAY_URL=https://oauth-relay.example.com
+OAUTH_RELAY_CLIENT=web-backend
+OAUTH_RELAY_SECRET=与 RELAY_CLIENTS 中对应值相同
+```
+
+`OAUTH_RELAY_SECRET` 只能放在后端，不能出现在前端代码、浏览器请求或公开仓库中。
+
+## 4. HMAC 签名与调用
+
+每次调用 Worker 都要携带以下 Header：
+
+```http
+x-oauth-relay-client: web-backend
+x-oauth-relay-timestamp: 1757203200
+x-oauth-relay-signature: <64 位十六进制 HMAC>
+```
+
+签名原文固定为以下六部分，每项使用换行符连接：
+
+```text
+timestamp
+client_id
+method
+pathname
+authorization
+body
+```
+
+也就是：
+
+```text
+${timestamp}\n${clientId}\n${method}\n${pathname}\n${authorization}\n${body}
+```
+
+其中：
+
+- `pathname` 是 `/google/token` 或 `/google/userinfo`，不包含域名。
+- Token 请求的 `body` 是实际发送的原始表单字符串。
+- UserInfo 请求的 `body` 是空字符串。
+- UserInfo 请求的 `Authorization: Bearer ...` 也必须参与签名。
+- 时间戳与 Worker 当前时间相差不能超过 60 秒。
+
+Python/FastAPI 可以这样生成签名：
+
+```python
+import hashlib
+import hmac
+import time
+
+
+def relay_headers(
+    secret: str,
+    client_id: str,
+    method: str,
+    pathname: str,
+    body: str = "",
+    authorization: str = "",
+) -> dict[str, str]:
+    timestamp = str(int(time.time()))
+    canonical = "\n".join(
+        [timestamp, client_id, method.upper(), pathname, authorization, body]
+    )
+    signature = hmac.new(
+        secret.encode(),
+        canonical.encode(),
+        hashlib.sha256,
+    ).hexdigest()
+    return {
+        "x-oauth-relay-client": client_id,
+        "x-oauth-relay-timestamp": timestamp,
+        "x-oauth-relay-signature": signature,
+    }
+```
+
+用授权码交换 Token：
+
+```python
+from urllib.parse import urlencode
+import httpx
+
+
+path = "/google/token"
+body = urlencode(
+    {
+        "code": code,
+        "client_id": google_client_id,
+        "client_secret": google_client_secret,
+        "redirect_uri": google_redirect_uri,
+        "grant_type": "authorization_code",
+        "code_verifier": code_verifier,
+    }
+)
+
+headers = {
+    "Content-Type": "application/x-www-form-urlencoded",
+    **relay_headers(relay_secret, relay_client, "POST", path, body=body),
+}
+
+async with httpx.AsyncClient(timeout=15) as client:
+    response = await client.post(
+        f"{relay_url.rstrip('/')}{path}",
+        content=body,
+        headers=headers,
+    )
+    response.raise_for_status()
+    access_token = response.json()["access_token"]
+```
+
+获取用户资料：
+
+```python
+path = "/google/userinfo"
+authorization = f"Bearer {access_token}"
+
+headers = {
+    "Authorization": authorization,
+    **relay_headers(
+        relay_secret,
+        relay_client,
+        "GET",
+        path,
+        authorization=authorization,
+    ),
+}
+
+async with httpx.AsyncClient(timeout=15) as client:
+    response = await client.get(
+        f"{relay_url.rstrip('/')}{path}",
+        headers=headers,
+    )
+    response.raise_for_status()
+    userinfo = response.json()
+```
+
+拿到用户资料后，建议使用 Google 返回的 `sub` 作为本地用户的唯一标识，不要只使用 email。
+
+## 5. 业务登录流程
+
+Worker 只负责转发请求，以下逻辑仍然由业务后端完成：
+
+1. 生成 `state` 和 PKCE `code_verifier`，保存到短期 HttpOnly Cookie 或服务端会话。
+2. 跳转 Google 授权页面。
+3. 回调后校验 `state`、授权码和 PKCE 参数。
+4. 调用 Worker 的 `/google/token` 和 `/google/userinfo`。
+5. 根据 `sub` 创建或查找本地用户，并创建自己的 Session 或 JWT。
+
+前端不需要、也不应该直接调用 Worker。
+
+## 常见问题
+
+- **`redirect_uri_mismatch`**：Google Console 中的回调地址和请求中的 `redirect_uri` 不完全一致。
+- **401**：客户端 ID、共享密钥、时间戳或 HMAC 原文不一致。
+- **415**：Token 请求必须使用 `application/x-www-form-urlencoded`，不能发送 JSON。
+- **国内服务器请求失败**：优先检查是否仍在使用 `workers.dev`，以及自有域名的 DNS、HTTPS 和 Cloudflare 代理配置。
+- **浏览器打不开 Google 登录页**：Worker 不代理授权页面，这是浏览器到 Google 的网络问题。
+
+## 总结
+
+这套方案的职责很简单：
+
+```text
+浏览器：完成 Google 授权
+业务后端：处理 state、PKCE、用户和本地会话
+Cloudflare Worker：转发 Token 和 UserInfo 请求
+```
+
+如果你也遇到国内服务器访问 Google OAuth 后端接口不稳定的问题，可以部署我开源的 [google-oauth-relay](https://github.com/Monster-2019/google-oauth-relay)。记住：Worker 部署后必须绑定自己的域名，并让后端使用这个自有域名访问。
+
+项目基于 [MIT License](https://github.com/Monster-2019/google-oauth-relay/blob/main/LICENSE) 开源。
