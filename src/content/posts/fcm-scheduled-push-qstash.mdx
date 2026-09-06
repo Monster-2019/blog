@@ -1,0 +1,296 @@
+---
+title: "使用 QStash 实现 FCM 定时推送通知"
+slug: "fcm-scheduled-push-qstash"
+author: "Monster Cone"
+pubDatetime: 2026-07-02
+tags: ["FCM", "Firebase Cloud Messaging", "QStash", "定时推送", "Serverless"]
+category: "后端与 Serverless"
+description: 介绍如何使用 QStash 延时消息能力为 Firebase Cloud Messaging 实现定时推送通知，适用于 Cloudflare Workers、Vercel、Node.js 等 Serverless 场景。
+---
+
+FCM（Firebase Cloud Messaging）本身负责把通知推送到客户端设备，但它不负责“定时调度”。如果我们希望某条通知在未来某个时间点发送，就需要额外引入一个任务调度层。
+
+在 Serverless 环境里，比较常见的做法是使用 QStash。它可以把一次 HTTP 请求延迟到指定时间后再投递给你的接口。这样我们只需要提供两个接口：一个负责接收发送请求，一个负责在 QStash 回调时真正执行 FCM 推送。
+
+## 实现思路
+
+整体流程可以拆成三步：
+
+```text
+调用方
+  |
+  | 1. 提交通知请求，包含 scheduledAt
+  v
+你的服务
+  |
+  | 2. 将任务发布到 QStash，并设置 notBefore
+  v
+QStash
+  |
+  | 3. 到时间后回调你的执行接口
+  v
+你的服务调用 FCM 发送通知
+```
+
+如果请求里没有定时时间，可以直接调用 FCM 立即发送；如果请求里包含定时时间，就把任务交给 QStash 延迟执行。
+
+## 安装 QStash SDK
+
+以 Node.js 或 Serverless 项目为例，可以安装 Upstash 提供的 QStash SDK：
+
+```bash
+npm install @upstash/qstash
+```
+
+然后准备一个环境变量：
+
+```bash
+QSTASH_TOKEN=your_qstash_token
+```
+
+这个 token 可以在 Upstash 控制台的 QStash 页面中获取。
+
+## 定义请求数据
+
+先假设我们要发送的通知请求长这样：
+
+```ts
+type SendNotificationPayload = {
+  token: string;
+  title: string;
+  body: string;
+  scheduledAt?: string;
+};
+```
+
+其中：
+
+- `token` 是客户端设备的 FCM token。
+- `title` 是通知标题。
+- `body` 是通知内容。
+- `scheduledAt` 是可选字段，表示希望通知在什么时候发送。
+
+建议 `scheduledAt` 使用 ISO 8601 格式：
+
+```json
+{
+  "token": "device_fcm_token",
+  "title": "Hello",
+  "body": "This is a scheduled notification.",
+  "scheduledAt": "2026-07-02T10:30:00.000Z"
+}
+```
+
+这样可以减少本地时区和服务器时区不一致带来的问题。
+
+## 接收通知请求
+
+下面是一个简化版接口示例。为了方便理解，这里只保留核心逻辑：
+
+```ts
+import { Client } from "@upstash/qstash";
+
+const qstash = new Client({
+  token: process.env.QSTASH_TOKEN!,
+});
+
+async function handleSendNotification(payload: SendNotificationPayload) {
+  if (!payload.scheduledAt) {
+    const result = await sendFcmNotification(payload);
+
+    return {
+      ok: true,
+      source: "immediate",
+      result,
+    };
+  }
+
+  const executeUrl = "https://example.com/api/notifications/execute";
+  const notBefore = Math.floor(new Date(payload.scheduledAt).getTime() / 1000);
+
+  const result = await qstash.publishJSON({
+    url: executeUrl,
+    body: payload,
+    notBefore,
+  });
+
+  return {
+    ok: true,
+    source: "scheduled",
+    messageId: result.messageId,
+  };
+}
+```
+
+这里的关键是 `notBefore`。
+
+QStash 的 `notBefore` 使用 Unix timestamp，单位是秒。因此需要把 JavaScript 的毫秒时间戳转换成秒：
+
+```ts
+const notBefore = Math.floor(new Date(payload.scheduledAt).getTime() / 1000);
+```
+
+如果直接把 `Date#getTime()` 的结果传进去，就会得到一个毫秒级时间戳，导致任务执行时间不符合预期。
+
+## 免费版限制
+
+按照 Upstash 当前的 [QStash 定价页](https://upstash.com/pricing/qstash) 和 [Delay 文档](https://upstash.com/docs/qstash/features/delay)，如果使用 QStash Free 计划，需要注意两个限制：
+
+- 每天最多 1,000 条 messages。
+- 最大延迟时间是 7 天。
+
+也就是说，`notBefore` 只能设置到未来 7 天以内。如果你的业务需要预约更久之后的通知，比如 30 天后、90 天后再发送，就不能只依赖 Free 计划的单条延时消息。
+
+这类场景通常有几种处理方式：
+
+- 升级到支持更长延迟时间的 QStash 计划。
+- 自己维护一张任务表，把 7 天以外的任务先存起来，等进入 7 天窗口后再投递到 QStash。
+- 使用已经封装好定时推送能力的第三方服务。
+
+另外，QStash 的 message 计费通常按投递次数计算。如果目标接口返回错误并触发重试，重试请求也会消耗额度。因此执行接口要尽量保持稳定，避免因为临时错误或鉴权问题反复消耗配额。
+
+## QStash 回调执行接口
+
+当时间到达 `notBefore` 后，QStash 会请求你发布任务时填写的 URL。这个接口只需要做一件事：取出 payload，然后调用 FCM。
+
+```ts
+async function handleExecuteNotification(payload: SendNotificationPayload) {
+  try {
+    const result = await sendFcmNotification(payload);
+
+    return {
+      ok: true,
+      result,
+    };
+  } catch (error) {
+    console.error("Failed to send scheduled notification:", error);
+
+    return new Response(
+      JSON.stringify({
+        error: String(error),
+      }),
+      {
+        status: 500,
+        headers: {
+          "content-type": "application/json",
+        },
+      }
+    );
+  }
+}
+```
+
+这里有一个非常重要的细节：如果 FCM 发送失败，执行接口应该返回非 `2xx` 状态码，例如 `500`。
+
+QStash 会根据目标接口返回的 HTTP 状态码判断任务是否执行成功：
+
+- 返回 `2xx`：QStash 认为任务成功。
+- 返回非 `2xx`：QStash 认为任务失败，并按重试策略再次投递。
+
+所以不要在 FCM 发送失败时仍然返回 `200`。否则 QStash 会认为这条任务已经完成，后续也不会再重试。
+
+## 调用 FCM 的示例函数
+
+下面是一个极简版 FCM HTTP v1 调用示例。真实项目中通常还需要处理 access token 缓存、错误日志和多设备发送。
+
+```ts
+async function sendFcmNotification(payload: SendNotificationPayload) {
+  const accessToken = await getFirebaseAccessToken();
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+
+  const response = await fetch(
+    `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`,
+    {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${accessToken}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        message: {
+          token: payload.token,
+          notification: {
+            title: payload.title,
+            body: payload.body,
+          },
+        },
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`FCM request failed: ${errorText}`);
+  }
+
+  return response.json();
+}
+```
+
+这段函数和 QStash 没有强绑定。QStash 只负责“什么时候调用你的接口”，真正发送通知的逻辑仍然由你的服务完成。
+
+## 保护执行接口
+
+执行接口是公网可访问的，因此不能完全裸奔。至少应该增加一种校验方式，确保只有可信请求可以触发通知发送。
+
+常见做法有两种：
+
+- 使用 QStash 官方签名校验，验证请求确实来自 QStash。
+- 在发布任务时附带一个内部 secret header，回调时检查这个 header。
+
+例如：
+
+```ts
+await qstash.publishJSON({
+  url: executeUrl,
+  body: payload,
+  notBefore,
+  headers: {
+    "x-internal-secret": process.env.INTERNAL_SECRET!,
+  },
+});
+```
+
+然后在执行接口里校验：
+
+```ts
+const secret = request.headers.get("x-internal-secret");
+
+if (secret !== process.env.INTERNAL_SECRET) {
+  return new Response("Unauthorized", { status: 401 });
+}
+```
+
+在生产环境里，更推荐使用 QStash 的签名校验能力，因为它能确认请求来源，而不仅仅是检查一个自定义 header。
+
+## 为什么适合 Serverless
+
+FCM 定时推送如果自己实现，通常需要维护任务表、轮询器、重试逻辑和失败记录。对于 Serverless 项目来说，这些能力不太适合放在一个常驻进程里。
+
+使用 QStash 后，服务只需要保持无状态：
+
+- 接收请求时，把未来任务发布到 QStash。
+- 到时间后，由 QStash 回调服务接口。
+- 执行失败时，通过 HTTP 状态码让 QStash 接管重试。
+
+这样可以避免自己维护后台调度进程，也更适合 Cloudflare Workers、Vercel Functions、Netlify Functions 等运行环境。
+
+## 小结
+
+使用 QStash 实现 FCM 定时推送的核心是：不要让服务自己等待时间，而是把“未来某个时间再调用接口”这件事交给 QStash。
+
+最终结构很简单：
+
+- 无 `scheduledAt`：立即调用 FCM。
+- 有 `scheduledAt`：发布到 QStash，并设置 `notBefore`。
+- QStash 到时间后：回调执行接口。
+- 执行接口：调用 FCM 发送通知。
+- 发送失败：返回非 `2xx`，让 QStash 自动重试。
+
+这样既保留了立即推送的效率，也能用很少的代码实现可靠的定时推送。
+
+## 不想自己搭建？
+
+如果你只是需要一个可用的推送服务，并不想自己维护 FCM 鉴权、Serverless 接口、QStash 延时任务、失败重试和统计面板，也可以直接使用我做的 [FastPush](https://push.dxin.cc/)。
+
+FastPush 是一个简单、快速、可靠的消息推送服务，提供 REST API、多通道推送和数据统计能力，适合需要快速接入推送能力的个人项目、独立产品和中小型应用。你可以把更多精力放在业务本身，而不是从零搭一套推送基础设施。

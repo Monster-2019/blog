@@ -17,12 +17,15 @@ const config: ResolvedAstroPaperConfig = {
     lang: userConfig.site.lang ?? "en",
     timezone: userConfig.site.timezone ?? "UTC",
     dir: userConfig.site.dir ?? "ltr",
+    logo: userConfig.site.logo,
+    favicon: userConfig.site.favicon,
+    baiduVerification: userConfig.site.baiduVerification,
     googleVerification:
       userConfig.site.googleVerification || PUBLIC_GOOGLE_SITE_VERIFICATION,
   },
   posts: {
-    perPage: userConfig.posts?.perPage ?? 4,
-    perIndex: userConfig.posts?.perIndex ?? 4,
+    perPage: userConfig.posts?.perPage ?? 8,
+    perIndex: userConfig.posts?.perIndex ?? 8,
     scheduledPostMargin:
       userConfig.posts?.scheduledPostMargin ?? 15 * 60 * 1000,
   },

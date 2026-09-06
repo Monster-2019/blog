@@ -21,7 +21,7 @@ export async function getStaticPaths() {
   const sortedPosts = getSortedPosts(posts);
 
   return sortedPosts.map((post, index) => ({
-    params: { slug: getPostSlug(post.id, post.filePath) },
+    params: { slug: getPostSlug(post.id, post.filePath, post.data.slug) },
     props: {
       post,
       // sortedPosts is newest-first, so "older" (prev) is a higher index
@@ -32,6 +32,7 @@ export async function getStaticPaths() {
               id: sortedPosts[index + 1].id,
               title: sortedPosts[index + 1].data.title,
               filePath: sortedPosts[index + 1].filePath,
+              slug: sortedPosts[index + 1].data.slug,
             }
           : null,
       nextPost:
@@ -40,6 +41,7 @@ export async function getStaticPaths() {
               id: sortedPosts[index - 1].id,
               title: sortedPosts[index - 1].data.title,
               filePath: sortedPosts[index - 1].filePath,
+              slug: sortedPosts[index - 1].data.slug,
             }
           : null,
     },
@@ -50,6 +52,7 @@ type AdjacentPost = {
   id: string;
   title: string;
   filePath: string | undefined;
+  slug?: string;
 } | null;
 
 type Props = {
@@ -71,6 +74,7 @@ const {
   timezone,
   tags,
   hideEditPost,
+  slug: explicitSlug,
 } = post.data;
 
 const { Content } = await render(post);
@@ -84,23 +88,29 @@ if (typeof initOgImage === "string") {
 }
 
 if (!ogImageUrl && config.features.dynamicOgImage) {
-  const postUrl = getPostUrl(post.id, post.filePath, locale).replace(
-    /\/+$/,
-    ""
-  );
+  const postUrl = getPostUrl(
+    post.id,
+    post.filePath,
+    locale,
+    explicitSlug
+  ).replace(/\/+$/, "");
   ogImageUrl = `${postUrl}/index.png`;
 }
 
 const ogImage = ogImageUrl
   ? new URL(ogImageUrl, Astro.url.origin).href
   : undefined;
+const postCanonicalURL = new URL(
+  getPostUrl(post.id, post.filePath, locale, explicitSlug),
+  Astro.site
+).href;
 ---
 
 <PostLayout
   title={`${title} | ${config.site.title}`}
   description={description}
   ogImage={ogImage}
-  canonicalURL={canonicalURL}
+  canonicalURL={canonicalURL ?? postCanonicalURL}
   pubDatetime={pubDatetime}
   modDatetime={modDatetime}
 >

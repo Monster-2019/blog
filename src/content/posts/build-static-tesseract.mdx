@@ -1,0 +1,54 @@
+---
+title: "PyInstaller 打包 OCR：构建静态版 Tesseract 可执行程序"
+slug: "build-static-tesseract"
+author: "Monster Cone"
+pubDatetime: 2025-11-08
+tags: ["Tesseract", "PyInstaller", "OCR", "Windows"]
+category: "OCR 与计算机视觉"
+description: 记录如何通过 vcpkg 构建静态版 Tesseract，并配合 PyInstaller 一起分发，解决桌面 OCR 工具依赖复杂、部署麻烦的问题。
+---
+
+Tesseract 是很多 OCR 项目都会用到的识别引擎，但它在桌面程序场景里有一个很常见的问题：开发机器上可以正常运行，不代表分发给其他人后也能直接使用。尤其是当我们通过 PyInstaller 把 Python 项目打包成 exe 时，如果目标机器没有额外安装 Tesseract、没有配置环境变量，程序很容易在运行时找不到可执行文件或依赖库。对普通用户来说，这种“先装运行环境再用程序”的流程会明显拉高使用门槛。
+
+比较实用的解决思路，就是构建一个静态版的 `tesseract.exe`，再把它和项目一起打包分发。所谓静态构建，本质上是把程序运行所需的绝大多数依赖在编译阶段就链接进去，减少对目标机器环境的依赖。这样做的好处非常直接：部署更简单、可移植性更高、打包后的行为也更可控，尤其适合桌面工具、离线识别工具或交付给非技术用户的内部软件。
+
+#### 安装构建工具
+
+在 Windows 环境下，建议先安装 Visual Studio，并勾选“使用 C++ 的桌面开发”相关组件。静态构建依赖完整的 C++ 编译工具链，因此这一步不能省略。
+
+#### 安装 vcpkg
+
+`vcpkg` 是微软维护的 C/C++ 包管理工具，很多第三方库都可以通过它统一安装和构建。
+
+```bash
+git clone https://github.com/microsoft/vcpkg.git
+cd vcpkg
+./bootstrap-vcpkg.bat
+./vcpkg.exe integrate install
+```
+
+执行完成后，终端会输出一段 `CMAKE_TOOLCHAIN_FILE` 路径。后续如果你还需要自己编译其他依赖，可以把这段工具链配置保存下来，方便复用。
+
+#### 安装静态版 Tesseract
+
+```bash
+vcpkg install tesseract:x64-windows-static
+```
+
+如果是 32 位环境，则使用对应的 `x86` triplet。安装完成后，相关文件通常会出现在 `packages/tesseract_x64-windows-static/tools/tesseract` 目录下。此时你可以直接在命令行中执行 `tesseract.exe --help`，确认程序是否能够独立运行。
+
+这里需要注意一点：即使 `tesseract.exe` 已经完成静态构建，语言数据文件 `tessdata` 仍然需要和程序一起分发，因为识别模型并不会自动内嵌到 exe 中。实际交付时，通常是把 `tesseract.exe` 和 `tessdata` 目录一起放进项目，再由程序显式指定路径。
+
+#### 配合 PyInstaller 使用
+
+如果你的 OCR 工具最终是通过 PyInstaller 打包，那么最省心的方式就是把整个 `tesseract` 目录复制到 Python 项目中，并在打包时一起带上：
+
+```bash
+pyinstaller main.py --add-data "tesseract;tesseract"
+```
+
+程序内部再把 `tesseract_cmd` 指向打包后的本地路径即可。这样最终生成的可执行文件就不再依赖用户手动安装 Tesseract，大幅降低了部署成本。
+
+虽然这篇文章偏工具链和桌面分发，但从前端工程师的角度看，本质上处理的还是“交付体验”问题。前端做工程化久了会发现，真正影响用户感受的很多时候不是功能本身，而是安装是否顺利、环境是否一致、上线后是否可复现。静态构建 Tesseract 这件事，和我们在前端把依赖尽量收敛、把运行环境尽量固定，其实是同一种思路。
+
+整体来说，静态构建 Tesseract 的核心目标不是“让编译更高级”，而是让交付更稳定。只要你的项目需要离线 OCR、桌面分发或者一键安装体验，这套方法都会非常值得投入。

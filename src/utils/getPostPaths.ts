@@ -20,9 +20,13 @@ function getIdSlug(id: string): string {
   return postId.length > 0 ? String(postId[postId.length - 1]) : id;
 }
 
-function getPostSlugPath(id: string, filePath: string | undefined): string {
+function getPostSlugPath(
+  id: string,
+  filePath: string | undefined,
+  explicitSlug?: string
+): string {
   const pathSegments = getPostPathSegments(filePath);
-  const slug = getIdSlug(id);
+  const slug = explicitSlug ?? getIdSlug(id);
   return pathSegments.length > 0
     ? [...pathSegments, slug].join("/")
     : String(slug);
@@ -33,20 +37,28 @@ function getPostSlugPath(id: string, filePath: string | undefined): string {
  * No base prefix, no locale — Astro handles those at a higher level.
  * e.g. `/examples/my-post`
  */
-export function getPostSlug(id: string, filePath: string | undefined): string {
-  return `/${getPostSlugPath(id, filePath)}`;
+export function getPostSlug(
+  id: string,
+  filePath: string | undefined,
+  explicitSlug?: string
+): string {
+  return `/${getPostSlugPath(id, filePath, explicitSlug)}`;
 }
 
 /**
  * Returns a fully navigable URL for use in `<a href>` and RSS links.
  * Applies both locale routing and the configured Astro base via
  * `getRelativeLocaleUrl`.
- * e.g. `/posts/my-post` or `/en/posts/my-post`
+ * e.g. `/blog/my-post` or `/zh-cn/blog/my-post`
  */
 export function getPostUrl(
   id: string,
   filePath: string | undefined,
-  locale: string | undefined = config.site.lang
+  locale: string | undefined = config.site.lang,
+  explicitSlug?: string
 ): string {
-  return getRelativeLocaleUrl(locale, `posts/${getPostSlugPath(id, filePath)}`);
+  return getRelativeLocaleUrl(
+    locale,
+    `blog/${getPostSlugPath(id, filePath, explicitSlug)}`
+  );
 }

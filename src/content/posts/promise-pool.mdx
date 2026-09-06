@@ -1,0 +1,45 @@
+---
+title: "Promise Pool 实战：优雅控制异步并发数量"
+slug: "promise-pool"
+author: "Monster Cone"
+pubDatetime: 2025-10-18
+tags: ["JavaScript", "Promise", "并发控制", "异步任务"]
+category: "前端开发"
+description: 通过 Promise Pool 控制异步任务并发数量，避免请求拥塞、资源争抢和瞬时流量过高的问题，适合上传和批量请求场景。
+---
+
+在前端和 Node.js 开发中，请求池是一个非常常见的需求。最典型的场景包括：批量上传文件、批量请求接口、批量处理图片或爬取数据。如果我们一次性把几十甚至上百个异步任务同时发出去，虽然代码写起来很简单，但运行时很可能会遇到带宽占满、接口限流、浏览器连接数受限，甚至服务端被瞬时流量打爆的问题。这个时候，真正需要的并不是“更快”，而是“有节制地并发执行”。
+
+Promise Pool 的核心思想就是：始终只让固定数量的任务处于执行中，等其中某个任务完成后，再补充下一个任务进入队列。这样既能保持并发带来的效率，又不会把资源一次性压满。相比串行执行，它更快；相比无限并发，它更稳，这也是它在工程项目里非常常见的原因。
+
+下面是一种比较实用的实现方式。需要注意的是，这里的 `tasks` 是“返回 Promise 的函数数组”，而不是已经执行完成的 Promise 列表。只有这样，我们才能真正控制任务从什么时候开始执行。
+
+```javascript
+async function promisePool(tasks, concurrency = 3) {
+  const results = new Array(tasks.length);
+  let nextIndex = 0;
+
+  async function worker() {
+    while (nextIndex < tasks.length) {
+      const current = nextIndex++;
+      results[current] = await tasks[current]();
+    }
+  }
+
+  const workers = Array.from(
+    { length: Math.min(concurrency, tasks.length) },
+    () => worker()
+  );
+
+  await Promise.all(workers);
+  return results;
+}
+```
+
+这段代码的原理可以理解为开启多个“工人”协程。每个工人从同一个任务队列中领取下一个待执行任务，执行完成后再继续领取，直到队列耗尽。最终返回的 `results` 会按照原始任务顺序保存结果，因此调用方不需要再手动对结果排序。
+
+如果你的业务希望“某个任务失败后其他任务继续执行”，那么可以把 `await tasks[current]()` 改成 `Promise.allSettled` 风格的包装，或者在内部使用 `try/catch` 返回统一的错误结构。也就是说，请求池解决的是并发控制问题，而不是错误恢复问题，二者最好分开设计。
+
+我自己在前端项目里最常用 Promise Pool 的场景，不是考试题里那种“批量请求接口”，而是真实业务里的上传、导入、批量重试和列表懒处理。这类功能一旦没有并发控制，问题往往不是“慢一点”，而是直接把浏览器、服务端或者对象存储接口推到不稳定状态。很多性能问题并不是因为代码写得不够快，而是因为没有给系统留缓冲空间。
+
+整体来说，Promise Pool 适合所有“任务很多，但又不能无脑并发”的场景。它实现不复杂，却能明显提升程序稳定性，是非常值得掌握的一类基础能力。

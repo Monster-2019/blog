@@ -26,6 +26,7 @@ const decodeSegment = (value: string) => {
 
 const navLabels: Record<string, string> = {
   posts: t.nav.posts,
+  blog: t.nav.posts,
   tags: t.nav.tags,
   about: t.nav.about,
   archives: t.nav.archives,
@@ -34,11 +35,18 @@ const navLabels: Record<string, string> = {
 
 // if breadcrumb is Home > Posts > [page] <etc>
 // replace Posts with localized "Posts (page number)"
-if (breadcrumbList[0] === "posts") {
+if (breadcrumbList[0] === "posts" || breadcrumbList[0] === "blog") {
+  const hasPageSegment = breadcrumbList[1] === "page";
+  const pageNumber = hasPageSegment ? breadcrumbList[2] : breadcrumbList[1];
+  const isPaginatedPage = pageNumber && !isNaN(Number(pageNumber));
+  const pageLabel = isPaginatedPage
+    ? t.pagination.page.replace("{{page}}", String(pageNumber))
+    : t.nav.posts;
+
   breadcrumbList.splice(
     0,
-    2,
-    `${t.nav.posts} (${t.pagination.page.toLowerCase()} ${breadcrumbList[1] || 1})`
+    hasPageSegment ? 3 : isPaginatedPage ? 2 : 1,
+    isPaginatedPage ? `${t.nav.posts} (${pageLabel})` : t.nav.posts
   );
 }
 

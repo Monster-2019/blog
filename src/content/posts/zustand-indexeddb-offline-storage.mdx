@@ -1,0 +1,83 @@
+---
+title: "Zustand + IndexedDB 实战：打造可离线的前端状态管理"
+slug: "zustand-indexeddb-offline-storage"
+author: "Monster Cone"
+pubDatetime: 2026-03-21
+tags: ["Zustand", "IndexedDB", "状态管理", "离线应用", "本地存储"]
+category: "前端开发"
+description: 介绍如何使用 Zustand 结合 IndexedDB 实现可离线的前端状态管理，兼顾数据持久化能力与用户体验。
+---
+
+为了摆脱 Microsoft To Do 每次使用都需要修改密码登录的困扰，我决定开发一个无需登录、可离线使用的 [Monster TodoList](https://td.dxin.cc/)。本文将分享如何利用 Zustand 和 IndexedDB 实现高效的离线数据持久化。
+
+## 1. Zustand 持久化基础
+
+要创建一个可持久化的 Store，我们需要使用persist、createJSONStorage这两个中间件。
+
+让我们从一个简单的 useCountStore 示例开始：
+
+```ts
+import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
+
+interface CountState {
+  count: number;
+  add: () => void;
+  sub: () => void;
+}
+
+const useCountStore = create<CountState>()(
+  persist(
+    set => ({
+      count: 0,
+      add: () => set(state => ({ count: state.count + 1 })),
+      sub: () => set(state => ({ count: state.count - 1 })),
+    }),
+    {
+      name: "count", // 存储在 Storage 中的键名
+      storage: createJSONStorage(() => sessionStorage), // 使用 sessionStorage 作为存储介质
+    }
+  )
+);
+```
+
+persist接受两个参数:
+
+1. Store 定义： 即 `(set, get) => ({ ... })`，定义了 Store 的初始状态和 actions。
+2. 持久化配置对象： Store持久化的详细配置。
+
+关键持久化配置如下：
+
+- name: 存在Storage中的键名。
+- storage: 使用createJSONStorage中间件返回一个包含getItem、setItem、removeItem方法的Storage接口对象，默认为localStorage。
+- partialize: 可选函数，返回要持久化的键值对对象，countStore 如果还有其他state，但我只想持久化count，则返回`{count: state.count}`, 不会持久化方法。
+- version: 持久化版本号，用于后面migrate时从旧版本迁移到新版本。
+- migrate: 一个函数，在读取到的持久化版本和当前Store版本不一样时触发，根据版本号升级兼容数据。
+
+还有一些其他配置可查看Zustand 官方文档 [Persisting store data](https://zustand.docs.pmnd.rs/integrations/persisting-store-data)
+
+## 2. 理解自定义持久化
+
+在第一节我们已经知道如何配置持久化，接下来我们要自定义持久化。
+
+```ts
+const customStorage = {
+  getItem: async (name: string) => { return JSON.stringify(state: {count: 0})},
+  setItem: async (name: string, value: string) => {},
+  removeItem: async (name: string) => {},
+}
+```
+
+上面就是自定义持久化的基础模板。
+
+- getItem: 当我们在页面中使用useCountStore时，会调用该方法，它接受一个name参数，为持久化配置的key。它需要返回一个包含state属性的字符串对象。
+- setItem: 当我们修改state时会调用该方法，它有两个参数，一个持久化配置的Storage键名，一个包含state、version属性的字符串对象。可自定义数据存放在哪里。
+- removeItem: 通过useCountStore.persist.clearStorage()调用。
+
+## 3. 自定义持久化初始化Store
+
+上述我们已经知道了自定义持久化配置，只需要添加相关的indexedDB的逻辑即可。
+
+建议仅在getItem中获取indexedDB数据初始化store即可，使用indexedDB存储的有序数据不适合通过setItem持久化，建议直接操作indexedDB。
+
+getItem中可以执行异步操作，可以发送请求获取远程数据进行初始化。

@@ -1,0 +1,192 @@
+---
+title: "Flutter Dio 并发请求 Token 刷新处理方案"
+slug: "dio-token-refresh-concurrent-requests"
+author: "Monster Cone"
+pubDatetime: 2026-04-04
+tags: ["Flutter", "Dio", "Token Refresh", "Completer"]
+category: "移动开发"
+description: 介绍 Flutter 使用 Dio 时，如何在高并发请求下只触发一次 Token 刷新，并通过 Completer 挂起等待中的请求队列。
+---
+
+在高频访问场景中，通常使用 **滚动令牌** 保持用户的长时间登录状态。但是在多个并发请求同时触发 Token 刷新时，容易出现 **重复刷新或刷新失败** 的情况：第一个请求成功刷新了 Token，后续请求仍使用旧 Token，导致刷新失败。
+
+本文介绍一种方案，通过 Dart 的 Completer 与 请求队列 实现并发安全的 Token 刷新处理。
+
+## 1. 了解Completer
+
+Completer 是 Dart 提供的一种手动控制 Future 完成的机制，它与 Future 的底层实现相同，但允许你在任意时刻完成或标记错误。
+
+### 基本结构
+
+```dart
+class Completer<T> {
+  Future<T> get future;
+  void complete([T? value]);   // 标记成功
+  void completeError(Object error, [StackTrace? stackTrace]); // 标记失败
+}
+```
+
+- future：等待结果的 Future。
+- complete: 完成异步任务并返回结果。
+- completeError: 完成异步任务并返回错误状态，相当于 Future.error。
+
+### 简单示例
+
+```dart
+void main() async {
+  final completer = Completer<String>();
+
+  print("任务开始");
+  // 模拟异步任务
+  Future.delayed(Duration(seconds: 2), () {
+    completer.complete("任务完成");
+  });
+
+  print("等待中...");
+  final result = await completer.future;
+  print(result);
+}
+```
+
+执行结果：
+
+- 任务开始
+- 等待中...
+- 2秒后执行complete输出任务完成
+
+## 2. 并发刷新 Token 的核心思路
+
+1. 定义一个刷新状态标识 \_isRefreshing。
+
+2. 定义一个挂起请求队列 \_pendingRequests，用于存储被挂起的请求及对应的 Completer。
+
+3. 当请求返回 401 错误时：
+
+- 如果正在刷新 Token，将当前请求挂起，等待刷新完成。
+- 如果未刷新，则触发刷新 Token，并更新队列中的请求。
+
+### 请求挂起示例
+
+```dart
+class _PendingRequest {
+  final RequestOptions options;
+  final Completer<Response> completer;
+
+  _PendingRequest(this.options, this.completer);
+}
+
+bool _isRefreshing = false;
+final List<_PendingRequest> _pendingRequests = [];
+
+if (_instance._isRefreshing) {
+  final completer = Completer<Response>();
+  _instance._pendingRequests
+      .add(_PendingRequest(error.requestOptions, completer));
+  try {
+    final res = await completer.future; // 等待刷新完成
+    handler.resolve(res);
+  } catch (e) {
+    handler.reject(
+      DioException(
+        requestOptions: error.requestOptions,
+        message: e.toString(),
+      ),
+    );
+  }
+  return; // 终止拦截器，防止重复处理
+}
+```
+
+> 注意 return 非常重要，它会直接终止当前拦截器逻辑，避免循环触发刷新。
+
+### 刷新 Token 并处理队列
+
+```dart
+_isRefreshing = true;
+
+try {
+  // 调用刷新 Token 接口
+  final newToken = await AuthService.refreshToken(
+    headers: {"authorization": "Bearer ${tokenManager.refreshToken}"}
+  );
+  await tokenManager.saveToken(newToken);
+
+  // 取出挂起请求并清空队列
+  final pending = List<_PendingRequest>.from(_pendingRequests);
+  _pendingRequests.clear();
+
+  // 重试挂起的请求
+  for (final pendingRequest in pending) {
+    final opts = Options(
+      method: pendingRequest.options.method,
+      headers: {
+        ...pendingRequest.options.headers,
+        "authorization": "Bearer ${tokenManager.accessToken}"
+      },
+      responseType: pendingRequest.options.responseType,
+      contentType: pendingRequest.options.contentType,
+    );
+
+    try {
+      final retryResponse = await dio.request(
+        pendingRequest.options.path,
+        data: pendingRequest.options.data,
+        queryParameters: pendingRequest.options.queryParameters,
+        options: opts,
+      );
+
+      pendingRequest.completer.complete(retryResponse);
+    } catch (e) {
+      pendingRequest.completer.completeError(e);
+    }
+  }
+
+  // 重试当前请求
+  final opts = Options(
+    method: error.requestOptions.method,
+    headers: {
+      ...error.requestOptions.headers,
+      "authorization": "Bearer ${tokenManager.accessToken}"
+    },
+    responseType: error.requestOptions.responseType,
+    contentType: error.requestOptions.contentType,
+  );
+
+  final retryResponse = await dio.request(
+    error.requestOptions.path,
+    data: error.requestOptions.data,
+    queryParameters: error.requestOptions.queryParameters,
+    options: opts,
+  );
+
+  return handler.resolve(retryResponse);
+} catch (e) {
+  // 刷新失败 -> 所有挂起请求失败并登出
+  for (final pendingRequest in _pendingRequests) {
+    pendingRequest.completer.completeError(e);
+  }
+  _pendingRequests.clear();
+  await logout();
+  handler.reject(
+    DioException(
+      requestOptions: error.requestOptions,
+      message: e.toString(),
+    ),
+  );
+} finally {
+  _isRefreshing = false;
+}
+```
+
+> 注意： 所有挂起请求在刷新失败时都需要 completeError，否则请求将一直等待。
+
+## 3. 总结
+
+- 使用 Completer 和 挂起队列 可以有效管理并发请求下的 Token 刷新问题。
+- 只有第一个请求触发刷新，其他请求挂起等待新 Token。
+- 刷新完成后，队列中的请求统一重试并返回结果。
+- 错误处理和 CancelToken 支持是保证健壮性的关键。
+
+这种模式适用于高并发访问场景，并且在 Flutter + Dio 中非常实用，能有效避免重复刷新和刷新冲突的问题。
+
+其他实现部分可以参考 [Flutter Dio 封装](https://blog.dxin.cc/blog/flutter-dio) 这篇文章

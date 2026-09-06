@@ -1,0 +1,279 @@
+---
+title: "IndexNow 是什么？Next.js 博客接入搜索引擎主动推送"
+slug: "indexnow-nextjs-vercel"
+author: "Monster Cone"
+pubDatetime: 2026-07-03
+tags: ["IndexNow", "Next.js", "SEO", "Vercel", "自动化部署"]
+category: "DevOps 与部署"
+description: 介绍 IndexNow 的工作原理、适用场景，以及如何在 Next.js 与 Vercel 部署流程中自动提交站点 URL，加快搜索引擎发现新内容。
+---
+
+做个人博客时，文章发布后最常见的等待就是：搜索引擎什么时候来抓取？传统方式主要依赖站点地图、内链和爬虫定期访问。它稳定，但不够主动，尤其是博客更新频率不高时，新文章被发现可能会有明显延迟。
+
+`IndexNow` 解决的就是这个问题：当页面新增、更新或删除时，网站可以主动把 URL 通知给支持该协议的搜索引擎。搜索引擎收到通知后，再决定是否抓取和更新索引。它不是“提交后立刻排名”的魔法按钮，但对内容发现速度和爬虫效率很有帮助。
+
+这篇文章记录一下 IndexNow 的基本原理，以及如何在 `Next.js + Vercel` 的博客项目里，把 URL 提交流程自动挂到构建之后。
+
+## IndexNow 是什么
+
+IndexNow 是一个开放协议，用来通知搜索引擎某些 URL 发生了变化。它的核心流程很简单：
+
+1. 生成一个站点专属 key。
+2. 在站点根路径放置 `{key}.txt` 文件，文件内容就是这个 key。
+3. 当页面发生变化时，通过 HTTP 请求把 URL 和 key 提交给 IndexNow API。
+
+官方文档提供了两种提交方式：
+
+- 单个 URL：通过 GET 请求提交。
+- 多个 URL：通过 POST JSON 批量提交，一次最多可以提交 10,000 个 URL。
+
+批量提交的 JSON 结构大致是这样：
+
+```json
+{
+  "host": "www.example.com",
+  "key": "your-indexnow-key",
+  "urlList": [
+    "https://www.example.com/post-1",
+    "https://www.example.com/post-2"
+  ]
+}
+```
+
+如果请求返回 `200`，表示 URL 已成功提交；如果返回 `202`，表示 URL 已收到，但 key 校验还在等待中。常见错误包括 key 文件不可访问、URL 不属于当前 host、格式错误或提交过于频繁。
+
+官方文档可以看这里：[IndexNow Documentation](https://www.indexnow.org/documentation)。
+
+## 它适合解决什么问题
+
+对个人博客、文档站、产品内容页来说，IndexNow 很适合下面几类场景：
+
+- 发布新文章后，希望搜索引擎更快发现 URL。
+- 更新旧文章后，希望搜索引擎更快重新抓取。
+- 删除或迁移页面后，希望搜索引擎尽快知道变化。
+- 站点内容不算高频更新，不想完全依赖爬虫定期发现。
+
+不过它也有边界：
+
+- 它只是通知，不保证收录，也不保证排名。
+- 它主要面向支持 IndexNow 的搜索引擎，不能替代 Google Search Console。
+- 它不能代替 sitemap、robots.txt、canonical、内链结构和页面质量。
+- 不建议每次页面访问都提交，应该在内容发布或构建完成后提交。
+
+简单说，IndexNow 是 SEO 基础设施里的一个“主动通知”能力，而不是 SEO 本身。
+
+## 生成并放置 key 文件
+
+IndexNow 需要通过 key 文件验证站点所有权。key 可以自己生成，只要满足长度和字符要求即可。比如使用 UUID：
+
+```bash
+node -e "console.log(crypto.randomUUID())"
+```
+
+假设生成的 key 是：
+
+```text
+73f35cf4-6bf6-4a92-a86e-3de50a80bc76
+```
+
+那么需要在 `public` 目录下创建一个同名文本文件：
+
+```text
+public/73f35cf4-6bf6-4a92-a86e-3de50a80bc76.txt
+```
+
+文件内容也写这个 key：
+
+```text
+73f35cf4-6bf6-4a92-a86e-3de50a80bc76
+```
+
+部署后，搜索引擎应该能访问到：
+
+```text
+https://www.example.com/73f35cf4-6bf6-4a92-a86e-3de50a80bc76.txt
+```
+
+这个 key 文件不是传统意义上的后端密钥，因为它本来就需要被搜索引擎访问。真正要注意的是：不要频繁变更它，否则搜索引擎需要重新校验。
+
+## 在站点配置里保存 key
+
+我的博客本身有一个 `siteMetadata` 配置文件，所以直接把 IndexNow key 放进去：
+
+```js
+const siteMetadata = {
+  siteUrl: "https://www.example.com",
+  indexNowKey: "73f35cf4-6bf6-4a92-a86e-3de50a80bc76",
+};
+
+module.exports = siteMetadata;
+```
+
+如果你更希望通过环境变量管理，也可以只在 Vercel 中配置 `INDEXNOW_KEY`，脚本里优先读取环境变量，再回退到站点配置。
+
+## 编写提交脚本
+
+接下来写一个 `scripts/indexnow.mjs`。核心思路是：
+
+- 读取站点域名和 key。
+- 收集需要提交的 URL。
+- 按 IndexNow POST JSON 格式提交。
+- 提交失败只打印 warning，不阻断构建。
+
+下面是一个简化版脚本：
+
+```js
+import siteMetadata from "../data/siteMetadata.js";
+
+const ENDPOINT = "https://api.indexnow.org/indexnow";
+
+async function submitIndexNow(urlList) {
+  const siteUrl = siteMetadata.siteUrl.replace(/\/$/, "");
+  const host = new URL(siteUrl).host;
+  const key = process.env.INDEXNOW_KEY || siteMetadata.indexNowKey;
+
+  if (!key || !urlList.length) return;
+
+  const response = await fetch(ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+    },
+    body: JSON.stringify({
+      host,
+      key,
+      urlList,
+    }),
+  });
+
+  if (response.status === 200 || response.status === 202) {
+    console.log(`IndexNow submitted ${urlList.length} URLs.`);
+    return;
+  }
+
+  console.warn(`IndexNow submission returned ${response.status}.`);
+}
+```
+
+实际项目里，URL 可以来自 sitemap、CMS、Contentlayer 生成的数据，或者你自己的路由配置。对于静态博客来说，最方便的是在构建后直接把文章页、列表页、分类页都收集出来。
+
+例如：
+
+```js
+const staticRoutes = ["", "about", "blog", "categories"];
+const staticUrls = staticRoutes.map(route =>
+  `${siteUrl}/${route}`.replace(/\/$/, "")
+);
+
+const blogUrls = allBlogs
+  .filter(post => !post.draft)
+  .map(post => `${siteUrl}/${post.path.replace(/^\//, "")}`);
+
+const urlList = [...new Set([...staticUrls, ...blogUrls])];
+```
+
+`new Set()` 用来去重，避免同一个 URL 被重复提交。
+
+## 接入 Next.js 的 postbuild
+
+我更推荐把 IndexNow 放在构建后执行，而不是在页面请求时执行。原因有三个：
+
+- 静态站点的 URL 列表在构建后最完整。
+- 不会因为用户访问页面而重复提交。
+- 失败时不会影响用户访问，只影响一次构建日志。
+
+如果项目已经有 `scripts/postbuild.mjs`，直接引入即可：
+
+```js
+import rss from "./rss.mjs";
+import indexNow from "./indexnow.mjs";
+
+async function postbuild() {
+  await rss();
+  await indexNow();
+}
+
+postbuild();
+```
+
+然后在 `package.json` 的 build 命令里接上 postbuild：
+
+```json
+{
+  "scripts": {
+    "build": "next build && node ./scripts/postbuild.mjs"
+  }
+}
+```
+
+这样每次 Vercel 构建完成后，就会自动提交最新 URL。
+
+## 给本地和预览环境加开关
+
+本地调试时通常不希望真的提交给搜索引擎，所以可以加一个环境变量：
+
+```bash
+INDEXNOW_SUBMIT=dry-run npm run build
+```
+
+脚本里判断一下：
+
+```js
+if (process.env.INDEXNOW_SUBMIT === "dry-run") {
+  console.log(`IndexNow dry run: ${urls.length} URLs ready.`);
+  return;
+}
+
+if (process.env.INDEXNOW_SUBMIT === "false") {
+  console.log("IndexNow skipped.");
+  return;
+}
+```
+
+如果你在 Vercel 上有 Preview Deployment，也建议在预览环境里设置：
+
+```text
+INDEXNOW_SUBMIT=false
+```
+
+正式生产环境不要设置这个变量，或者保持为空，这样部署后才会真实提交。
+
+## 部署后怎么验证
+
+部署完成后，可以先检查 key 文件是否能访问：
+
+```text
+https://www.example.com/your-indexnow-key.txt
+```
+
+然后看 Vercel 的构建日志，正常情况下会看到类似输出：
+
+```text
+IndexNow submitted 56 URLs (200).
+```
+
+如果返回 `202` 也不用慌，它表示搜索引擎已经收到 URL，但 key 校验还在处理中。第一次接入时比较常见。
+
+如果返回 `403`，优先检查：
+
+- key 文件路径是否正确。
+- key 文件内容是否和提交的 key 一致。
+- 文件是否能通过生产域名公开访问。
+
+如果返回 `422`，通常是 URL 和 host 不匹配，比如提交了 `example.com`，但 `host` 写的是 `www.example.com`。
+
+## 和 sitemap 的关系
+
+IndexNow 不应该替代 sitemap。更合理的搭配是：
+
+- `sitemap.xml` 负责提供稳定、完整的站点 URL 列表。
+- `robots.txt` 负责告诉爬虫 sitemap 在哪里。
+- IndexNow 负责在内容变化后主动通知搜索引擎。
+
+也就是说，sitemap 是长期地图，IndexNow 是变更通知。两者一起用，才是比较稳的方案。
+
+## 小结
+
+IndexNow 的接入成本很低：一个 key 文件，一个提交脚本，再把它挂到构建流程里就可以了。对个人博客来说，它最实用的价值不是“提升排名”，而是让搜索引擎更快知道站点发生了变化。
+
+如果你已经有自动部署流程，建议把 IndexNow 放到 postbuild 阶段；如果你使用 CMS，也可以在文章发布、更新、删除时触发提交。无论哪种方式，记住一点就够了：只在内容真的发生变化时提交，别把它当成定时刷接口。

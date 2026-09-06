@@ -1,0 +1,48 @@
+---
+title: "Ubuntu 开发环境初始化脚本：一键安装 Git、Docker 和 Nginx"
+slug: "ubuntu-development-environment"
+author: "Monster Cone"
+pubDatetime: 2025-09-27
+tags: ["Ubuntu", "Bash", "环境搭建", "Docker"]
+category: "基础设施"
+description: 用脚本快速完成 Ubuntu 开发环境初始化，包括软件源替换、Git、Docker 与 Nginx 等基础依赖安装。
+---
+
+每次拿到一台新的 Ubuntu 机器，不管是本地虚拟机、云服务器，还是团队里的临时开发环境，前几步通常都差不多：更新软件源、安装 Git、安装 Docker、再准备一个 Nginx 作为反向代理或静态资源服务。单独执行这些命令并不复杂，但重复次数多了之后，最适合的方式还是整理成一份可复用脚本，这样不仅节省时间，也更方便团队统一环境。
+
+环境初始化脚本的价值，不只是“省几分钟手动操作”。更重要的是，它能把搭建流程固定下来，让每台机器的基础依赖版本和安装顺序尽量一致。尤其是在项目需要 Docker、Nginx、代码拉取和后续自动部署时，一份稳定的初始化脚本会明显降低环境差异带来的问题。
+
+下面是一份常用的 Ubuntu 初始化脚本示例：
+
+```bash
+#!/bin/sh
+set -e
+
+sudo sed -i "s@http://.*archive.ubuntu.com@https://mirrors.tuna.tsinghua.edu.cn@g" /etc/apt/sources.list
+sudo sed -i "s@http://.*security.ubuntu.com@https://mirrors.tuna.tsinghua.edu.cn@g" /etc/apt/sources.list
+
+sudo apt-get update
+
+echo "start install git"
+sudo apt-get install -y git
+echo "end install git"
+
+echo "start install docker"
+sudo apt-get install -y ca-certificates curl gnupg lsb-release
+sudo mkdir -p /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt-get update
+sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+echo "end install docker"
+
+echo "start install nginx"
+sudo apt-get install -y nginx
+echo "end install nginx"
+```
+
+这份脚本的思路很直接。首先替换软件源，目的是在国内网络环境下获得更稳定的更新速度；然后安装 Git，方便拉取项目代码；接着配置 Docker 官方仓库并安装 Docker 相关组件，为后续容器化部署做准备；最后安装 Nginx，满足静态资源托管、反向代理和 HTTPS 接入等基础需求。
+
+其中比较关键的是 Docker 这一步。直接使用 Ubuntu 默认仓库中的 Docker 版本虽然也能工作，但版本往往偏旧。通过 Docker 官方源安装，可以更容易获得稳定的新版本，并减少后续使用 `docker compose` 或新特性时遇到兼容问题。
+
+实际使用时，还可以继续补充 Node.js、pnpm、Python、JDK 或常用监控工具，把它逐渐沉淀成适合自己团队的初始化模板。脚本本身不是目的，真正重要的是把环境搭建从“依赖记忆”变成“可重复执行的标准流程”。

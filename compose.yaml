@@ -1,21 +1,14 @@
 services:
   app:
-    image: ghcr.io/pnpm/pnpm:11.3.0
+    build:
+      context: .
+    image: monster-cone-blog:latest
     ports:
-      - 4321:4321
-    working_dir: /app
-    command: >
-      bash -c "
-      pnpm runtime set node 24 -g
-      && pnpm install --frozen-lockfile
-      && pnpm prune
-      && pnpm run dev --host 0.0.0.0"
+      - "80:80"
+    restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4321"]
-      interval: 10s
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/ || exit 1"]
+      interval: 30s
       timeout: 5s
-      retries: 10
-      start_period: 60s
-    volumes:
-      - ./:/app
-      - /app/node_modules
+      retries: 3
+      start_period: 10s

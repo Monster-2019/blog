@@ -1,0 +1,63 @@
+---
+title: "Chrome 扩展如何只在指定路由注入 content.js"
+slug: "chrome-extensions-match-content"
+author: "Monster Cone"
+pubDatetime: 2025-12-27
+tags: ["Chrome Extensions", "SPA", "content script"]
+category: "前端开发"
+description: 解决 Chrome 扩展在 SPA 场景下无法按子路由精确注入 content.js 的问题，适合需要按页面状态动态执行脚本的场景。
+---
+
+在开发 Chrome 扩展时，`content.js` 通常会通过 `manifest.json` 里的 `content_scripts` 自动注入页面。这种方式足够简单，但在单页应用（SPA）场景下经常不够精确。原因在于：很多现代站点切换页面时并不会真正刷新文档，而是通过 History API 在同一个标签页里更新路由。结果就是，扩展脚本要么在不该执行的时候提前注入，要么在路由切换后根本不会重新执行。
+
+如果我们的需求是“只在某个具体子路由下运行脚本”，那么把注入时机完全交给 `content_scripts` 往往不够灵活。更稳妥的做法，是把“什么时候注入”这件事交给后台脚本统一控制，再通过 `chrome.scripting.executeScript` 在匹配路由时主动执行 `content.js`。这也是我在 SPA 页面里更推荐的实现方式。
+
+#### manifest.json
+
+```json
+{
+  "permissions": ["webNavigation", "scripting"],
+  "host_permissions": ["https://*.xxx.com/*"],
+  "background": {
+    "service_worker": "background.js"
+  }
+}
+```
+
+这里的关键点有两个：`webNavigation` 用来监听页面导航事件，`scripting` 用来在指定标签页动态注入脚本。`host_permissions` 则声明了扩展允许访问的站点范围。
+
+#### background.js
+
+```javascript
+chrome.webNavigation.onCompleted.addListener(
+  details => {
+    chrome.scripting.executeScript({
+      target: { tabId: details.tabId },
+      files: ["content.js"],
+    });
+  },
+  {
+    url: [{ urlMatches: "https://www.xxx.com/xxx.*" }],
+  }
+);
+
+chrome.webNavigation.onHistoryStateUpdated.addListener(
+  details => {
+    chrome.scripting.executeScript({
+      target: { tabId: details.tabId },
+      files: ["content.js"],
+    });
+  },
+  {
+    url: [{ urlMatches: "https://www.xxx.com/xxx.*" }],
+  }
+);
+```
+
+这段实现的原理是：第一次页面真正加载完成时，由 `onCompleted` 处理；如果页面是 SPA，路由在不刷新的情况下更新，则由 `onHistoryStateUpdated` 处理。两个监听器都只在 `urlMatches` 命中的情况下触发，因此脚本能够更精准地注入到目标页面，而不是进入整个站点后就立即执行。
+
+不过这里还要注意一个细节：如果用户在同一路由上反复切换或某些页面会重复触发导航事件，`content.js` 可能被多次注入。实际项目里最好在 `content.js` 顶部增加一次性标记，例如判断 `window.__EXTENSION_INJECTED__`，避免重复挂载 DOM、重复注册监听器，导致页面行为异常。
+
+以我做前端工具和浏览器侧增强功能的经验来看，扩展开发最容易踩坑的点，就是“页面已经变了，但脚本以为没变”。尤其在 React、Vue 这类 SPA 站点里，路由变化和真实刷新是两套完全不同的生命周期。如果还是按传统页面思维只监听首次加载，很容易出现元素找不到、状态不同步、脚本重复执行这些问题。所以我更倾向于把注入时机掌握在后台脚本手里，而不是把所有判断都堆在 `content.js` 内部。
+
+因此，这种方案的价值并不只是“能匹配子路由”，更重要的是把扩展注入逻辑从声明式配置提升为可控的运行时行为。对于依赖页面状态、路由变化和特定页面结构的扩展功能来说，这种方式会更稳定，也更容易排查问题。

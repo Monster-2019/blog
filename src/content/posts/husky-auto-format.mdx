@@ -1,0 +1,88 @@
+---
+title: "Git 提交前自动格式化：Husky + lint-staged 实战"
+slug: "husky-auto-format"
+author: "Monster Cone"
+pubDatetime: 2025-08-09
+tags: ["ESLint", "Prettier", "Husky", "lint-staged"]
+category: "DevOps 与部署"
+description: 通过 Husky、lint-staged、ESLint 与 Prettier 在提交前自动格式化代码，减少多人协作中的风格分歧和无效 diff。
+---
+
+多人协作开发时，真正让人头疼的往往不是功能冲突，而是那些“逻辑没变、格式全变”的无效 diff。比如缩进方式不同、引号风格不统一、尾逗号规则不一致，这些问题单看都不严重，但一旦项目规模变大、参与人数变多，就会不断消耗代码评审和合并成本。想要从根源上解决这类问题，关键不是靠大家自觉，而是把代码风格约束前移到提交流程里。
+
+`Husky + lint-staged + ESLint + Prettier` 就是一套非常常见的组合。它的原理并不复杂：通过 Husky 注册 Git Hook，在 `pre-commit` 阶段触发校验；再由 `lint-staged` 只处理本次暂存区中的文件，避免每次提交都全量扫描项目；最后交给 ESLint 修复语法和规范问题，交给 Prettier 统一代码格式。这样一来，真正进入仓库的代码会更整洁，团队成员之间也更容易保持一致。
+
+#### 安装依赖
+
+```bash
+npm install eslint eslint-config-prettier eslint-plugin-prettier eslint-plugin-vue prettier --save-dev
+npm install husky lint-staged --save-dev
+npx husky install
+```
+
+其中，ESLint 负责规则检查和部分自动修复，Prettier 负责格式统一，Husky 负责接入 Git 提交流程，`lint-staged` 则把处理范围限制在已暂存文件上，这一点对大型项目尤其重要。
+
+#### ESLint 与 Prettier 配置
+
+```js
+// .eslintrc.js
+module.exports = {
+  root: true,
+  parserOptions: {
+    parser: "@typescript-eslint/parser",
+  },
+  parser: "vue-eslint-parser",
+  extends: ["plugin:vue/vue3-recommended", "prettier"],
+  rules: {
+    "vue/multi-word-component-names": 0,
+    "vue/no-mutating-props": 0,
+  },
+};
+```
+
+```json
+// .prettierrc
+{
+  "printWidth": 100,
+  "tabWidth": 2,
+  "useTabs": true,
+  "semi": false,
+  "singleQuote": false,
+  "bracketSpacing": true,
+  "arrowParens": "avoid",
+  "trailingComma": "es5"
+}
+```
+
+#### Husky 配置
+
+```bash
+npx husky add .husky/pre-commit
+```
+
+```sh
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+npx lint-staged
+```
+
+```json
+// package.json
+{
+  "scripts": {
+    "prepare": "husky install"
+  },
+  "lint-staged": {
+    "src/**": [
+      "prettier --config .prettierrc --write",
+      "eslint --fix",
+      "git add"
+    ]
+  }
+}
+```
+
+当我们执行 `git commit` 时，Husky 会先触发 `pre-commit`，然后 `lint-staged` 只对本次提交的文件执行格式化和校验。如果问题可以自动修复，流程会继续；如果存在无法修复的错误，提交会被中断，开发者必须先处理完问题再提交。这样的流程既能保证仓库代码质量，也不会让本地开发体验变得太重。
+
+实践里还有一个建议：不要把生成文件、构建产物或截图资源放进 `lint-staged` 规则里，否则提交速度会明显变慢。把规则聚焦在真正需要协作的源码文件上，自动化才能既严格又高效。

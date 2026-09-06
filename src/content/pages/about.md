@@ -1,37 +1,24 @@
 ---
-title: "About"
-description: "A bit about me and this blog."
+title: "关于我"
+description: "了解 Monster Cone、内容方向与联系方式。"
 ---
 
-AstroPaper is a minimal, accessible and SEO-friendly blog theme built with [Astro](https://astro.build/) and [Tailwind CSS](https://tailwindcss.com/).
+我喜欢把遇到的问题拆开，找到能长期复用的解法，再把过程记录下来。这里是我的个人技术空间，内容来自真实项目、日常学习和问题排查。
 
-![Astro Paper](@/assets/images/astropaper-og.jpg)
+## 记录什么
 
-AstroPaper provides a solid foundation for blogs, or even portfolios\_ with full markdown support, built-in dark mode, and a clean layout that works out-of-the-box.
+这里主要发布原创技术文章，内容覆盖 React、Next.js、TypeScript、前端工程化、浏览器能力、自动化部署、移动端适配、性能优化以及开发工具使用心得。
 
-The blog posts in this theme also serve as guides, docs or example articles\_ making AstroPaper a flexible starting point for your next content-driven site.
+我更关注问题的背景、取舍和最终落地方式，希望每篇文章都能成为一份可复现、可验证的实践记录。
 
-## Features
+## 写作方式
 
-AstroPaper comes with a set of useful features that make content publishing easy and effective:
+本站内容基于个人实践、公开文档和技术社区资料整理而成。文章会尽量注明关键背景、适用场景和限制条件；如果内容后续发现错误或过时，我会在能力范围内进行修正。
 
-- SEO-friendly
-- Fast performance
-- Light & dark mode
-- Highly customizable
-- Organizable blog posts
-- Responsive & accessible
-- Static search with [PageFind](https://pagefind.app/)
-- Automatic social image generation
+## 联系我
 
-and so much more.
+如果你对文章内容有疑问、发现错误、希望补充资料，或者需要就版权、隐私、合作等事项与我联系，可以发送邮件至：
 
-## Show your support
+**dongxin2019@gmail.com**
 
-If you like [AstroPaper](https://github.com/satnaing/astro-paper), consider giving it a star ⭐️.
-
-Found a bug 🐛 or have an improvement ✨ in mind? Feel free to open an [issue](https://github.com/satnaing/astro-paper/issues), submit a [pull request](https://github.com/satnaing/astro-paper/pulls) or start a [discussion](https://github.com/satnaing/astro-paper/discussions).
-
-If you find this theme helpful, you can also [sponsor me on GitHub](https://github.com/sponsors/satnaing) or [buy me a coffee](https://buymeacoffee.com/satnaing) to show your support — every penny counts.
-
-Kyay zuu! 🙏🏼
+感谢你的阅读，希望这里的内容能对你的开发工作有所帮助。

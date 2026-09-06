@@ -1,0 +1,157 @@
+---
+title: "利用 Cloudflare Worker 保持 Supabase 一直处于活跃状态"
+slug: "supabase-keepalive"
+author: "Monster Cone"
+pubDatetime: 2026-06-26
+tags: ["Cloudflare Worker", "Supabase"]
+category: "后端与 Serverless"
+description: 介绍如何使用 Cloudflare Workers 和 Cron Triggers 定时访问 Supabase，避免免费项目在低流量阶段进入自动暂停状态。
+---
+
+Supabase 很适合用来快速验证新产品，可以省掉大量接口和后台管理的开发时间。不过免费项目如果长时间没有请求，就有可能进入暂停状态。对于刚上线、流量还不稳定的新应用来说，这一点会比较麻烦：项目本身需要“活跃”，但早期又不一定真的有用户访问。
+
+这种场景下，可以用 Cloudflare Workers 做一个轻量的保活服务，再通过 Cron Triggers 定时触发。Worker 不需要维护服务器，部署成本低，用来定时访问 Supabase 正好合适。
+
+## 1. 创建 Cloudflare Worker 项目
+
+先创建一个最简单的 Worker 项目：
+
+```bash
+npm create cloudflare@latest -- fatspush-keepalive
+```
+
+```bash
+What would you like to start with?
+→ Hello World example
+
+Which template would you like to use?
+→ Worker only
+
+Which language do you want to use?
+→ JavaScript
+```
+
+进入项目并启动本地开发服务：
+
+```bash
+cd fatspush-keepalive
+npm run dev
+```
+
+## 2. 编写保活逻辑
+
+保活的思路很简单：定时向 Supabase Auth 发送一次登录请求。这里可以使用一个不存在的账号和密码，因此请求大概率会返回 400。这个状态码是预期结果，它说明请求已经成功到达 Supabase，并触发了后端服务，而不是完全没有访问发生。
+
+将 Worker 代码改成下面这样：
+
+```javascript
+/**
+ * Supabase keep-alive Worker
+ *
+ * 作用：
+ * 1. 通过 Cron Triggers 定时访问 Supabase
+ * 2. 支持手动 HTTP 访问，方便部署后测试
+ */
+async function sendKeepAliveSignal(env) {
+  const targetUrl =
+    "https://fkakagurkshkbpdsmtmq.supabase.co/auth/v1/token?grant_type=password";
+
+  // 推荐通过 Cloudflare 环境变量配置，避免把 anon key 直接写死在代码里
+  const anonKey = env.SUPABASE_ANON_KEY || "YOUR_SUPABASE_ANON_KEY_HERE";
+
+  try {
+    const response = await fetch(targetUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: anonKey, // 必须带上，用于通过外层 Kong 网关
+      },
+      body: JSON.stringify({
+        email: "keepalive@example.com",
+        password: "keepalive-test-password",
+      }),
+    });
+
+    // 账号密码是假的，通常会返回 400；这里关心的是请求是否成功抵达 Supabase
+    console.info(
+      `[Keep-Alive] 信号已送达，Supabase 响应状态码: ${response.status}`
+    );
+    return response.status;
+  } catch (error) {
+    console.error("[Keep-Alive] 请求发生异常:", error);
+    throw error;
+  }
+}
+
+export default {
+  // 通过 Cloudflare Cron Triggers 定时触发
+  async scheduled(event, env, ctx) {
+    console.info(`[Cron Trigger] 开始执行定时保活任务...`);
+    ctx.waitUntil(sendKeepAliveSignal(env));
+  },
+
+  // 支持手动 HTTP 触发，方便部署后直接访问 Worker 地址测试
+  async fetch(request, env, ctx) {
+    console.info("[HTTP Trigger] 收到手动触发请求");
+    try {
+      const status = await sendKeepAliveSignal(env);
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: "Keep-alive signal dispatched",
+          supabase_status: status,
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    } catch (err) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: err.message,
+        }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+  },
+};
+```
+
+注意把 `targetUrl` 中的 Supabase 项目地址替换成你自己的地址，并配置好 `SUPABASE_ANON_KEY`。如果不想把 anon key 写进代码，可以使用 Wrangler 添加 Secret：
+
+```bash
+npx wrangler secret put SUPABASE_ANON_KEY
+```
+
+## 3. 配置 Cron Triggers
+
+部署 Worker：
+
+```bash
+npm run deploy
+```
+
+然后在 Cloudflare 控制台进入对应 Worker，找到 **Settings > Triggers > Cron Triggers**，添加一个定时规则。例如每 12 小时执行一次：
+
+```bash
+0 */12 * * *
+```
+
+如果想更频繁一点，也可以改成每 6 小时一次：
+
+```bash
+0 */6 * * *
+```
+
+配置完成后，Cloudflare 会按计划调用 `scheduled` 方法。你也可以直接访问 Worker 的公开地址，确认返回结果中包含 `success: true` 和 Supabase 的响应状态码。
+
+## 4. 小结
+
+这个方案的核心是用 Cloudflare Workers 提供一个几乎零维护成本的定时任务，让 Supabase 免费项目在低流量阶段也能保持访问记录。对于个人项目、早期 Demo 或 MVP 来说，这种做法足够轻量，也不会额外引入一台服务器。
+
+不过需要注意，保活并不等于业务可用性监控。如果项目已经进入正式运行阶段，最好还是把健康检查、错误告警和真实业务接口监控补上，这样才能及时发现 Supabase 或应用本身的异常。

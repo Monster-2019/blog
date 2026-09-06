@@ -1,0 +1,482 @@
+---
+title: "用 Cloudflare Workers 搭建 FCM 推送中转服务"
+slug: "cloudflare-workers-fcm"
+author: "Monster Cone"
+pubDatetime: 2026-03-28
+tags: ["Cloudflare Workers", "FCM", "Firebase", "Hono", "Serverless"]
+category: "后端与 Serverless"
+description: 介绍如何借助 Cloudflare Workers 与 Hono 搭建可用的 FCM 推送中转服务，并通过 OAuth 鉴权与 KV 缓存提升部署效率和可用性。
+---
+
+在中国大陆，由于无法直接访问 Firebase Cloud Messaging（FCM）服务，很多项目需要通过境外服务器进行中转。这类服务器访问速度较慢，配置也低，性价比不高。不过，最近我发现 Cloudflare Workers 是一个非常适合解决这一问题的方案，能够高效托管 FCM 服务。接下来，我将详细介绍如何使用 Cloudflare Workers 和 Hono 框架来实现这一功能。
+
+## 1. 为什么选择 Hono？
+
+Hono 是一个轻量级的框架，专为 JavaScript 环境设计，并且与 Cloudflare Workers 深度集成，使得在服务器上部署服务变得极其简单。我们可以通过以下命令快速搭建一个 Cloudflare Workers 项目：
+
+```bash
+npm create hono@latest my-app
+```
+
+创建完成后，进入项目目录并启动开发环境：
+
+```bash
+cd my-app
+npm install
+npm run dev
+```
+
+这时，访问 http://localhost:8787 即可看到接口返回的数据。
+
+## 2. 使用 Oauth 2.0 获取 Access Token
+
+为了认证，我们使用服务账号和私钥文件获取 Firebase 的 access_token。你可以通过 Firebase 控制台生成服务账号私钥文件，并将其转化为字符串存储到 .dev.vars 文件中。
+
+接下来，我们实现 fetchAccessToken 方法来发送请求并获取 access_token：
+
+```typescript
+interface GoogleAuthResponse {
+  access_token: string;
+  expires_in: number;
+  token_type: string;
+}
+
+const fetchAccessToken = async (FIREBASE_ADMINSDK: string) => {
+  const sa = JSON.parse(FIREBASE_ADMINSDK);
+  const now = Math.floor(Date.now() / 1000);
+
+  // 1️⃣ 构造 JWT header + payload
+  const header = { alg: "RS256", typ: "JWT", kid: sa.private_key_id };
+  const payload = {
+    iss: sa.client_email,
+    scope: "https://www.googleapis.com/auth/cloud-platform",
+    aud: "https://oauth2.googleapis.com/token",
+    iat: now,
+    exp: now + 3600,
+  };
+
+  // 2️⃣ Base64URL 编码
+  const base64url = (obj: object) =>
+    btoa(JSON.stringify(obj))
+      .replace(/=/g, "")
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_");
+
+  const unsignedJWT = `${base64url(header)}.${base64url(payload)}`;
+
+  // 3️⃣ 导入私钥
+  const pkcs8 = sa.private_key
+    .replace("-----BEGIN PRIVATE KEY-----", "")
+    .replace("-----END PRIVATE KEY-----", "")
+    .replace(/\n/g, "");
+  const keyData = Uint8Array.from(atob(pkcs8), c => c.charCodeAt(0));
+  const privateKey = await crypto.subtle.importKey(
+    "pkcs8",
+    keyData,
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+
+  const signature = await crypto.subtle.sign(
+    "RSASSA-PKCS1-v1_5",
+    privateKey,
+    new TextEncoder().encode(unsignedJWT)
+  );
+
+  const signedJWT =
+    unsignedJWT +
+    "." +
+    btoa(String.fromCharCode(...new Uint8Array(signature)))
+      .replace(/=/g, "")
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_");
+
+  // 5️⃣ 请求 Google token
+  try {
+    const res = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+        assertion: signedJWT,
+      }),
+    });
+
+    const data: GoogleAuthResponse = await res.json();
+    return data.access_token;
+  } catch (e) {
+    return "";
+  }
+};
+```
+
+使用私钥文件通过转码、哈希算法进行签名生成JWT，使用fetch携带JWT发送请求获取AccessToken，fetch是内置请求方法，同web客户端一样用法。
+
+认证接口响应如下：
+
+- access_token: 授权令牌，携带该令牌发送请求
+- token_type: Token类型，这里是"Bearer"
+- expires_in: 有效期（秒），3600秒
+
+## 3. 使用 Cloudflare KV 缓存 Access Token
+
+Cloudflare Workers 提供的 KV 存储功能让我们能够缓存 access token，在 token 有效期内避免重复请求。首先，创建一个 KV 命名空间：
+
+```bash
+npx wrangler kv namespace create <BINDING_NAME>
+```
+
+在 wrangler.jsonc 中进行配置，并通过 Hono 框架的环境变量将其传递给应用：
+
+```json
+// wrangler.jsonc
+...
+"kv_namespaces": [
+  {
+    "binding": <BINDING_NAME>,
+    "id": "xxxxxxxxxxxxxxxxxxxxxxxx"
+  }
+],
+...
+```
+
+```typescript
+type Bindings = {
+  FIREBASE_ADMINSDK: string;
+  BINDING_NAME: KVNamespace;
+};
+
+const app = new Hono<{ Bindings: Bindings }>();
+```
+
+安装@cloudflare/workers-types库并配置tsconfig.json消除KVNamespace TypeScript警告。
+
+```bash
+npm i --dev @cloudflare/workers-types
+```
+
+```typescript
+// tsconfig.json
+{
+  ...
+  "lib": [
+    "ESNext",
+    "WebWorker"
+  ],
+  "types": [
+    "@cloudflare/workers-types"
+  ]
+}
+```
+
+我们创建一个getAccessToken方法，先查看KV中的accessToken，如果没有或者过期，则请求新的，如果没有过期则直接返回。
+
+```typescript
+const getAccessToken = async (env: Bindings) => {
+  let accessToken: string | null = await env.BINDING_NAME.get("accessToken");
+  if (!accessToken) {
+    accessToken = await fetchAccessToken(env.FIREBASE_ADMINSDK);
+    await env.BINDING_NAME.put("accessToken", accessToken, {
+      expirationTtl: 3600,
+    });
+  }
+  return accessToken;
+};
+```
+
+KV支持TTL，但并不会清除，而是值变为null。因为读取env变量依赖上下文，所以我们需要在调用方法时传递env。
+
+## 4. 使用REST V1 API实现send接口
+
+通过 POST 请求 FCM 的发送接口，可以实现向指定设备推送消息。我们使用 zod 对请求数据进行验证，并发送请求：
+
+```typescript
+const SEND_URL =
+  "https://fcm.googleapis.com/v1/projects/monster-push/messages:send";
+
+const fcmMessageSchema = z.object({
+  message: z.object({
+    notification: z.object({
+      title: z.string(),
+      body: z.string(),
+    }),
+    webpush: z.object({
+      fcm_options: z.object({
+        link: z.string(), // 验证 link 字段是一个有效的 URL
+      }),
+      notification: z.object({
+        icon: z.string(), // 验证 icon 字段是一个有效的 URL
+      }),
+    }),
+    data: z.object({
+      messageId: z.string(),
+    }),
+  }),
+  tokens: z.array(z.string()), // tokens 是一个字符串数组
+});
+
+app.post(
+  "/send",
+  validator("json", (value, c) => {
+    const parsed = fcmMessageSchema.safeParse(value);
+    if (!parsed.success) {
+      return c.text(parsed.error.message, 400);
+    }
+    return parsed.data;
+  }),
+  async c => {
+    const data = c.req.valid("json");
+    const accessToken = await getAccessToken(c.env);
+    if (!accessToken) return c.text("Invalid AccessToken");
+
+    const { tokens, message } = data;
+    if (!tokens.length) return c.json([]);
+    try {
+      const pendingList = Promise.all(
+        tokens.map(async (token: string) => {
+          const res = await fetch(SEND_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: "Bearer " + accessToken,
+            },
+            body: JSON.stringify({
+              message: {
+                ...message,
+                token,
+              },
+            }),
+          });
+          return await res.json().catch(e => JSON.stringify(e));
+        })
+      );
+      const result = await pendingList;
+      return c.json(result);
+    } catch (e) {
+      return c.text(JSON.stringify(e));
+    }
+  }
+);
+```
+
+因为我们的服务部署在Cloudflare Workers，所以有很多的局限性，例如无法直接使用Google SDK进行认证和多设备推送。
+
+V1 API目前只暴露了send接口，所以这里仅实现了send接口。因为send每次只能向一个设备推送通知，所以如果需要同时推送多个设备，则要多次请求。但Cloudflare Workers 和 FCM 都支持HTTP2，即使循环并发请求响应速度也非常快。
+
+## 5. 完整实现
+
+```typescript
+// index.ts
+import { Hono } from "hono";
+import { validator } from "hono/validator";
+import { z } from "zod";
+
+type Bindings = {
+  FIREBASE_ADMINSDK: string;
+  XXX: KVNamespace;
+};
+
+interface GoogleAuthResponse {
+  access_token: string;
+  expires_in: number;
+  token_type: string;
+}
+
+const app = new Hono<{ Bindings: Bindings }>();
+
+const SEND_URL =
+  "https://fcm.googleapis.com/v1/projects/monster-push/messages:send";
+
+const fetchAccessToken = async (FIREBASE_ADMINSDK: string) => {
+  const sa = JSON.parse(FIREBASE_ADMINSDK);
+  const now = Math.floor(Date.now() / 1000);
+
+  // 1️⃣ 构造 JWT header + payload
+  const header = { alg: "RS256", typ: "JWT", kid: sa.private_key_id };
+  const payload = {
+    iss: sa.client_email,
+    scope: "https://www.googleapis.com/auth/cloud-platform",
+    aud: "https://oauth2.googleapis.com/token",
+    iat: now,
+    exp: now + 3600,
+  };
+
+  // 2️⃣ Base64URL 编码
+  const base64url = (obj: object) =>
+    btoa(JSON.stringify(obj))
+      .replace(/=/g, "")
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_");
+
+  const unsignedJWT = `${base64url(header)}.${base64url(payload)}`;
+
+  // 3️⃣ 导入私钥
+  const pkcs8 = sa.private_key
+    .replace("-----BEGIN PRIVATE KEY-----", "")
+    .replace("-----END PRIVATE KEY-----", "")
+    .replace(/\n/g, "");
+  const keyData = Uint8Array.from(atob(pkcs8), c => c.charCodeAt(0));
+  const privateKey = await crypto.subtle.importKey(
+    "pkcs8",
+    keyData,
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+
+  const signature = await crypto.subtle.sign(
+    "RSASSA-PKCS1-v1_5",
+    privateKey,
+    new TextEncoder().encode(unsignedJWT)
+  );
+
+  const signedJWT =
+    unsignedJWT +
+    "." +
+    btoa(String.fromCharCode(...new Uint8Array(signature)))
+      .replace(/=/g, "")
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_");
+
+  // 5️⃣ 请求 Google token
+  try {
+    const res = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+        assertion: signedJWT,
+      }),
+    });
+
+    const data: GoogleAuthResponse = await res.json();
+    return data.access_token;
+  } catch (e) {
+    return "";
+  }
+};
+
+const getAccessToken = async (env: Bindings) => {
+  let accessToken: string | null = await env.XXX.get("accessToken");
+  if (!accessToken) {
+    accessToken = await fetchAccessToken(env.FIREBASE_ADMINSDK);
+    await env.XXX.put("accessToken", accessToken, { expirationTtl: 3600 });
+  }
+  return accessToken;
+};
+
+const fcmMessageSchema = z.object({
+  message: z.object({
+    notification: z.object({
+      title: z.string(),
+      body: z.string(),
+    }),
+    webpush: z.object({
+      fcm_options: z.object({
+        link: z.string(), // 验证 link 字段是一个有效的 URL
+      }),
+      notification: z.object({
+        icon: z.string(), // 验证 icon 字段是一个有效的 URL
+      }),
+    }),
+    data: z.object({
+      messageId: z.string(),
+    }),
+  }),
+  tokens: z.array(z.string()), // tokens 是一个字符串数组
+});
+
+app.post(
+  "/send",
+  validator("json", (value, c) => {
+    const parsed = fcmMessageSchema.safeParse(value);
+    if (!parsed.success) {
+      return c.text(parsed.error.message, 400);
+    }
+    return parsed.data;
+  }),
+  async c => {
+    const data = c.req.valid("json");
+    const accessToken = await getAccessToken(c.env);
+    if (!accessToken) return c.text("Invalid AccessToken");
+
+    const { tokens, message } = data;
+    if (!tokens.length) return c.json([]);
+    try {
+      const pendingList = Promise.all(
+        tokens.map(async (token: string) => {
+          const res = await fetch(SEND_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: "Bearer " + accessToken,
+            },
+            body: JSON.stringify({
+              message: {
+                ...message,
+                token,
+              },
+            }),
+          });
+          return await res.json().catch(e => JSON.stringify(e));
+        })
+      );
+      const result = await pendingList;
+      return c.json(result);
+    } catch (e) {
+      return c.text(JSON.stringify(e));
+    }
+  }
+);
+
+export default app;
+```
+
+## 6. 部署到Cloudflare Workers
+
+在完成代码编写后，可以通过以下命令将项目部署到 Cloudflare Workers：
+
+```bash
+npm run deploy
+```
+
+确保在 Cloudflare Workers 控制台中配置好环境变量，这样应用就可以正常运行了。
+
+## 7. 自定义路由、限制访问、认证、开启日志
+
+#### 自定义路由
+
+需要使用Cloudflare DNS解析，在Workers详情设置里添加域名路由，并且在DNS解析里配置域名。就可以使用自定义域名访问Workers了。
+
+#### 访问限制和认证
+
+如果你和我一样仅仅只通过后端服务访问该接口，通过在防火墙安全规则里限制域名和源IP即可。
+
+如果需要认证访问，可以在请求时携带 token，然后在Workers里解析token进行认证授权访问。
+
+#### 开启日志
+
+```json
+{
+  ...
+  "observability": {
+		"enabled": false,
+		"logs": {
+			"enabled": true,
+			"head_sampling_rate": 1,
+			"invocation_logs": true
+		}
+	}
+}
+```
+
+直接在wrangler.jsonc配置然后部署，或者在后端开启也行。
+
+## 总结
+
+通过使用 Cloudflare Workers 和 Hono 框架，我们能够非常方便地在边缘计算环境中托管 Firebase Cloud Messaging 服务。通过 OAuth 认证、KV 缓存和简洁的接口设计，我们可以实现高效、低成本的推送服务。
+
+如果站在一个做了几年前端和全栈交叉工作的开发者视角来看，这套方案真正有价值的地方，不只是“能把消息发出去”，而是它用比较低的维护成本补上了跨区域访问、部署速度和运行费用之间的空缺。很多时候，前端团队在做推送、鉴权、存储这类能力时，并不是缺一个完美方案，而是缺一个足够轻、足够稳、上线阻力又小的方案。Cloudflare Workers 恰好适合这种中间层服务。
+
+当然，它也不是完全没有边界。比如复杂的批量推送管理、细粒度监控、消息追踪和后台管理能力，Workers 并不能天然替代完整后端。但如果目标是快速搭建一个可维护、部署方便、成本可控的 FCM 中转层，那么这套实现已经非常实用。对我来说，这类方案最重要的评价标准不是“技术栈是否炫”，而是出了问题能不能快速定位、后续能不能被团队稳定接手。

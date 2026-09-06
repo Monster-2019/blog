@@ -1,11 +1,12 @@
 ---
 import { getEntry, render } from "astro:content";
+import { getRelativeLocaleUrl } from "astro:i18n";
+import IconArrowRight from "@/assets/icons/IconArrowRight.svg";
 import Layout from "@/layouts/Layout.astro";
 import Header from "@/components/Header.astro";
-import Breadcrumb from "@/components/Breadcrumb.astro";
-import Main from "@/components/Main.astro";
 import Footer from "@/components/Footer.astro";
 import config from "@/config";
+import { getAssetPath } from "@/utils/withBase";
 
 const about = await getEntry("pages", "about");
 
@@ -16,6 +17,11 @@ if (!about) {
 }
 
 const { Content } = await render(about);
+const { site } = config;
+const locale = Astro.currentLocale ?? config.site.lang;
+const avatarPath = getAssetPath("static/images/avatar.jpg");
+const githubUrl = "https://github.com/Monster-2019";
+const emailUrl = "mailto:dongxin2019@gmail.com";
 ---
 
 <Layout
@@ -26,11 +32,449 @@ const { Content } = await render(about);
 >
   <Header />
 
-  <Breadcrumb />
+  <main id="main-content" class="about-page">
+    <section class="about-hero" data-reveal>
+      <div class="about-hero-copy">
+        <p class="about-eyebrow">
+          <span class="about-eyebrow-dot" aria-hidden="true"></span>
+          关于我 · 独立开发者
+        </p>
+        <h1 class="about-title">
+          把真实问题<span class="about-title-image"
+            ><img src={avatarPath} alt="" aria-hidden="true" /></span
+          >写成可复用的解法。
+        </h1>
+        <p class="about-lead">
+          我关注前端工程、全栈实践和 Web 产品体验。
+          这里记录那些真正解决过的问题，以及解决它们时做出的选择。
+        </p>
+        <div class="about-actions">
+          <a
+            class="about-primary-action"
+            href={getRelativeLocaleUrl(locale, "blog")}
+          >
+            阅读文章
+            <IconArrowRight aria-hidden="true" />
+          </a>
+          <a class="about-secondary-action" href={emailUrl}>联系我</a>
+        </div>
+      </div>
 
-  <Main pageTitle={about.data.title} class="app-prose">
-    <Content />
-  </Main>
+      <aside class="about-profile" data-reveal>
+        <div class="about-profile-top">
+          <span>个人技术空间</span>
+          <span aria-hidden="true">↗</span>
+        </div>
+        <div class="about-profile-image">
+          <img
+            src={avatarPath}
+            alt="Monster Cone 的头像"
+            width="600"
+            height="600"
+          />
+        </div>
+        <div class="about-profile-bottom">
+          <div>
+            <p class="about-profile-name">{site.author}</p>
+            <p class="about-profile-role">
+              Frontend / Full-stack / Independent
+            </p>
+          </div>
+          <a
+            href={githubUrl}
+            target="_blank"
+            rel="noreferrer"
+            aria-label="访问 GitHub"
+          >
+            GitHub
+          </a>
+        </div>
+      </aside>
+    </section>
+
+    <section class="about-body" data-reveal>
+      <article class="about-story">
+        <p class="about-section-kicker">一个持续更新的工作台</p>
+        <h2>让经验留下来，<br />让下一次少走一点弯路。</h2>
+        <div class="about-prose app-prose">
+          <Content />
+        </div>
+      </article>
+
+      <aside class="about-notes">
+        <div class="about-note">
+          <p class="about-note-label">关注方向</p>
+          <ul class="about-focus-list">
+            <li>React、Vue 与 TypeScript</li>
+            <li>前端工程化与浏览器能力</li>
+            <li>Cloudflare、自动化部署与全栈实践</li>
+            <li>移动端开发与效率工具</li>
+          </ul>
+        </div>
+
+        <div class="about-note about-note-callout">
+          <p class="about-note-label">保持联系</p>
+          <p>
+            如果你发现文章中的错误，或者想聊聊某个技术问题，欢迎直接发邮件。
+          </p>
+          <a href={emailUrl}>dongxin2019@gmail.com</a>
+        </div>
+      </aside>
+    </section>
+  </main>
 
   <Footer />
 </Layout>
+
+<style>
+  .about-page {
+    width: min(100%, 72rem);
+    margin-inline: auto;
+    padding: 1.5rem 1rem 6rem;
+    overflow: hidden;
+  }
+
+  .about-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(17rem, 0.75fr);
+    align-items: end;
+    gap: clamp(2.5rem, 8vw, 8rem);
+    padding-block: clamp(4rem, 10vw, 8rem) clamp(3.5rem, 8vw, 7rem);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .about-eyebrow,
+  .about-section-kicker,
+  .about-note-label {
+    margin: 0;
+    color: var(--accent);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    line-height: 1.4;
+    text-transform: uppercase;
+  }
+
+  .about-eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .about-eyebrow-dot {
+    width: 0.55rem;
+    height: 0.55rem;
+    border-radius: 999px;
+    background: var(--accent);
+  }
+
+  .about-title {
+    max-width: 66rem;
+    margin: 1.25rem 0 1.75rem;
+    font-size: clamp(3.1rem, 7vw, 6.6rem);
+    font-weight: 700;
+    letter-spacing: -0.065em;
+    line-height: 0.96;
+  }
+
+  .about-title-image {
+    display: inline-block;
+    width: clamp(3.8rem, 9vw, 7.5rem);
+    height: clamp(2.4rem, 5.3vw, 4.2rem);
+    margin-inline: 0.12em;
+    overflow: hidden;
+    border: 2px solid var(--foreground);
+    border-radius: 999px;
+    vertical-align: 0.08em;
+    transform: rotate(-5deg);
+  }
+
+  .about-title-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .about-lead {
+    max-width: 42rem;
+    margin: 0;
+    color: color-mix(in srgb, var(--foreground) 76%, transparent);
+    font-size: clamp(1.05rem, 1.8vw, 1.35rem);
+    line-height: 1.75;
+  }
+
+  .about-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.85rem;
+    margin-top: 2rem;
+  }
+
+  .about-primary-action,
+  .about-secondary-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    padding: 0.7rem 1rem;
+    border: 1px solid var(--foreground);
+    font-weight: 700;
+    text-decoration: none;
+    transition:
+      background-color 180ms ease,
+      color 180ms ease,
+      transform 180ms ease;
+  }
+
+  .about-primary-action {
+    background: var(--foreground);
+    color: var(--background);
+  }
+
+  .about-primary-action:hover,
+  .about-secondary-action:hover {
+    transform: translateY(-2px);
+  }
+
+  .about-primary-action:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-foreground);
+  }
+
+  .about-secondary-action:hover {
+    color: var(--accent);
+  }
+
+  .about-primary-action svg {
+    width: 1.1rem;
+  }
+
+  .about-profile {
+    position: relative;
+    padding: 1rem;
+    border: 1px solid var(--foreground);
+    background: var(--foreground);
+    color: var(--background);
+    box-shadow: 0.8rem 0.8rem 0 var(--accent);
+    transform: rotate(2deg);
+  }
+
+  .about-profile-top,
+  .about-profile-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .about-profile-top {
+    padding: 0.35rem 0.25rem 1rem;
+    color: color-mix(in srgb, var(--background) 70%, transparent);
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .about-profile-image {
+    aspect-ratio: 1;
+    overflow: hidden;
+    background: var(--accent);
+  }
+
+  .about-profile-image img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: saturate(0.9) contrast(1.05);
+    transition: transform 700ms ease;
+  }
+
+  .about-profile:hover .about-profile-image img {
+    transform: scale(1.05);
+  }
+
+  .about-profile-bottom {
+    align-items: end;
+    padding: 1rem 0.25rem 0.25rem;
+  }
+
+  .about-profile-name,
+  .about-profile-role {
+    margin: 0;
+  }
+
+  .about-profile-name {
+    font-size: 1.15rem;
+    font-weight: 700;
+  }
+
+  .about-profile-role {
+    margin-top: 0.25rem;
+    color: color-mix(in srgb, var(--background) 68%, transparent);
+    font-size: 0.72rem;
+  }
+
+  .about-profile-bottom a {
+    border-bottom: 1px solid currentColor;
+    font-size: 0.8rem;
+    text-decoration: none;
+  }
+
+  .about-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(17rem, 0.8fr);
+    gap: clamp(2.5rem, 8vw, 8rem);
+    padding-top: clamp(4rem, 9vw, 8rem);
+  }
+
+  .about-story {
+    padding-right: clamp(0rem, 3vw, 3rem);
+  }
+
+  .about-story h2 {
+    margin: 1.1rem 0 0;
+    font-size: clamp(2.3rem, 4.5vw, 4.5rem);
+    letter-spacing: -0.055em;
+    line-height: 1.02;
+  }
+
+  .about-prose {
+    max-width: 43rem;
+    margin-top: 2.5rem;
+  }
+
+  .about-prose :global(h2:first-child) {
+    margin-top: 0;
+  }
+
+  .about-notes {
+    display: flex;
+    flex-direction: column;
+    gap: 3rem;
+  }
+
+  .about-note {
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .about-focus-list {
+    margin: 1.25rem 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .about-focus-list li {
+    padding: 0.9rem 0;
+    border-bottom: 1px solid var(--border);
+    line-height: 1.5;
+  }
+
+  .about-note-callout {
+    padding: 1.5rem;
+    border: 0;
+    background: var(--accent);
+    color: var(--accent-foreground);
+  }
+
+  .about-note-callout .about-note-label {
+    color: inherit;
+    opacity: 0.72;
+  }
+
+  .about-note-callout p:not(.about-note-label) {
+    margin: 1.25rem 0;
+    font-size: 1.05rem;
+    line-height: 1.7;
+  }
+
+  .about-note-callout a {
+    border-bottom: 1px solid currentColor;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  [data-reveal] {
+    opacity: 0;
+    transform: translateY(1.25rem);
+    transition:
+      opacity 650ms ease,
+      transform 650ms ease;
+  }
+
+  [data-reveal].is-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  @media (max-width: 900px) {
+    .about-page {
+      padding-top: 0.5rem;
+      padding-bottom: 4rem;
+    }
+
+    .about-hero,
+    .about-body {
+      grid-template-columns: 1fr;
+    }
+
+    .about-hero {
+      gap: 3rem;
+      padding-block: 4rem 4rem;
+    }
+
+    .about-title {
+      font-size: clamp(2.8rem, 14vw, 5.2rem);
+    }
+
+    .about-profile {
+      max-width: 26rem;
+      margin-right: 0.8rem;
+    }
+
+    .about-body {
+      gap: 4rem;
+      padding-top: 4rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    [data-reveal],
+    [data-reveal].is-visible,
+    .about-profile-image img,
+    .about-primary-action,
+    .about-secondary-action {
+      transition: none;
+      transform: none;
+    }
+  }
+</style>
+
+<script>
+  const revealAbout = () => {
+    const elements = document.querySelectorAll<HTMLElement>("[data-reveal]");
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      elements.forEach(element => element.classList.add("is-visible"));
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      entries => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("is-visible");
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.12 }
+    );
+
+    elements.forEach(element => observer.observe(element));
+  };
+
+  revealAbout();
+  document.addEventListener("astro:after-swap", revealAbout);
+</script>

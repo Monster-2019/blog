@@ -11,6 +11,7 @@ import LinkButton from "./LinkButton.astro";
 import { stripBase, stripLocale } from "@/utils/withBase";
 import { useTranslations } from "@/i18n";
 import config from "@/config";
+import { getAssetPath } from "@/utils/withBase";
 
 const { site, features } = config;
 
@@ -50,8 +51,19 @@ const isActive = (path: string) => {
   >
     <a
       href={getRelativeLocaleUrl(locale, "")}
-      class="absolute py-1 text-xl leading-8 font-semibold whitespace-nowrap sm:static sm:my-auto sm:text-2xl sm:leading-none"
+      class="absolute flex items-center gap-3 py-1 text-xl leading-8 font-semibold whitespace-nowrap sm:static sm:my-auto sm:text-2xl sm:leading-none"
     >
+      {
+        site.logo && (
+          <img
+            src={getAssetPath(site.logo)}
+            alt=""
+            width="40"
+            height="40"
+            class="size-10 rounded-full object-cover"
+          />
+        )
+      }
       {site.title}
     </a>
     <nav
@@ -76,8 +88,8 @@ const isActive = (path: string) => {
       >
         <li class="col-span-2">
           <a
-            href={getRelativeLocaleUrl(locale, "posts")}
-            class:list={{ "active-nav": isActive("/posts") }}
+            href={getRelativeLocaleUrl(locale, "blog")}
+            class:list={{ "active-nav": isActive("/blog") }}
           >
             {t.nav.posts}
           </a>

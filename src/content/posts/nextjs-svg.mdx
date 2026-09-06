@@ -1,0 +1,228 @@
+---
+title: "Next.js 16 中优雅地使用 SVG"
+slug: "nextjs-svg"
+author: "Monster Cone"
+pubDatetime: 2026-04-12
+tags: ["Next.js", "SVG", "SVGR", "Turbopack"]
+category: "前端开发"
+description: 在 Next.js 16 中用 @svgr/webpack 将 SVG 作为 React 组件导入，并掌握尺寸、颜色以及 mask / defs ID 冲突的处理方式。
+---
+
+在 Next.js 项目里使用 SVG，常见有两种方式：
+
+- 把 SVG 当静态资源，通过 `/public`、`<img>` 或 `<Image />` 引用
+- 把 SVG 当 React 组件导入，直接通过 `className`、`style` 和 props 控制
+
+如果你只是展示一张不会变化的插图，静态资源已经够用；但如果你要控制图标尺寸、颜色、`hover` 状态，甚至还要跟随主题切换，那么组件化导入会顺手很多。
+
+这篇文章以 Next.js 16 为例，使用 `@svgr/webpack` 实现 SVG 组件化导入，并顺手解决两个高频问题：
+
+- 如何用 `className` 控制 SVG 的大小和颜色
+- 带 `mask` / `clipPath` / `linearGradient` 等 `id` 的 SVG，为什么多次渲染会出问题
+
+## 1. 安装并配置 `@svgr/webpack`
+
+先安装依赖：
+
+```bash
+npm install --save-dev @svgr/webpack
+```
+
+Next.js 16 可以直接在 `turbopack.rules` 里配置 `@svgr/webpack`：
+
+```ts
+// next.config.ts
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  turbopack: {
+    rules: {
+      "*.svg": {
+        loaders: [
+          {
+            loader: "@svgr/webpack",
+            options: {
+              icon: true,
+            },
+          },
+        ],
+        as: "*.js",
+      },
+    },
+  },
+};
+
+export default nextConfig;
+```
+
+这里的 `icon: true` 很适合图标场景，它会把根节点的 `width` 和 `height` 处理成 `1em`，这样我们就能更自然地通过 `className` 或字体大小来控制尺寸。
+
+如果你使用 TypeScript，再补一个类型声明：
+
+```ts
+// svgr.d.ts
+declare module "*.svg" {
+  import type { FC, SVGProps } from "react";
+
+  const content: FC<SVGProps<SVGSVGElement>>;
+  export default content;
+}
+```
+
+> 如果 `svgr.d.ts` 没有被 TypeScript 自动识别，可以把它显式加到 `tsconfig.json` 的 `include` 开头。
+
+> 说明：Next.js 15.2 及更早版本里，这个配置项还叫 `experimental.turbo`。如果你的项目仍然依赖 webpack 规则，直接参考 SVGR 官方的 `webpack(config)` 方案即可。
+
+## 2. 像组件一样导入 SVG
+
+先准备一个简单图标：
+
+```html
+<!-- app/icons/search.svg -->
+<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2" />
+  <path
+    d="M20 20L16.65 16.65"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+  />
+</svg>
+```
+
+在页面里直接导入即可：
+
+```tsx
+// app/page.tsx
+import SearchIcon from "./icons/search.svg";
+
+export default function Home() {
+  return (
+    <main className="flex items-center gap-4 p-8">
+      <SearchIcon className="size-5 text-slate-500" />
+      <SearchIcon className="size-8 text-emerald-500" />
+    </main>
+  );
+}
+```
+
+这时候 `SearchIcon` 就是一个普通 React 组件，可以直接吃 `className`、`style`，也能配合 Tailwind 的 `text-*`、`size-*` 来调整展示效果。
+
+顺带提一句，`SVGR` 的原理不是去生成 `<use>` 标签，而是把原始 SVG 转成 JSX，再包装成 React 组件，所以像 `strokeWidth`、`className` 这类 React 属性都能正常工作。
+
+## 3. 控制 SVG 的大小和颜色
+
+想让 SVG 真正“好用”，关键是下面两点。
+
+### 尺寸
+
+如果源文件在根节点写死了 `width` 和 `height`，CSS 很可能改不动尺寸。常见做法有两种：
+
+- 在导出的 SVG 中移除 `width` 和 `height`
+- 在 `@svgr/webpack` 里开启 `icon: true`
+
+如果你的 SVG 不是图标，而是一张复杂插画，也可以改用 `dimensions: false`，只保留 `viewBox`，把尺寸完全交给外层样式控制。
+
+### 颜色
+
+如果想让颜色跟随 Tailwind 的 `text-*` 或普通 CSS 的 `color`，就要把 SVG 里的硬编码颜色改成 `currentColor`，例如：
+
+```html
+<path fill="currentColor" stroke="currentColor" />
+```
+
+这样外层写 `text-blue-500`、`text-red-500` 就能直接生效。
+
+如果整套图标都是单色，还可以在 loader 里做批量替换：
+
+```ts
+{
+  loader: '@svgr/webpack',
+  options: {
+    icon: true,
+    replaceAttrValues: {
+      '#000': 'currentColor',
+    },
+  },
+}
+```
+
+`replaceAttrValues` 只会替换完全匹配的颜色值，所以更适合统一规范的单色图标库。多色插画不要一股脑替换成 `currentColor`，否则很容易把视觉层次抹平。
+
+## 4. 多次渲染带 `id` 的 SVG
+
+如果 SVG 里用了 `mask`、`clipPath`、`linearGradient`、`filter`、`pattern` 这类定义节点，你可能会遇到一个很隐蔽的问题：
+
+同一个 SVG 组件在一个页面里渲染多次后，样式错乱了，或者遮罩、渐变、裁剪效果串了。
+
+根本原因是这些能力通常依赖 `id` + `url(#id)` 引用，而 `id` 在整个文档里应该唯一。多个相同 SVG 同时渲染时，就可能发生冲突。
+
+例如下面这种写法，在单个组件里没问题，但复用多次就可能出问题：
+
+```html
+<svg viewBox="0 0 24 24" fill="none">
+  <mask id="badge-mask">
+    <rect width="24" height="24" fill="white" />
+    <circle cx="12" cy="12" r="5" fill="black" />
+  </mask>
+
+  <rect
+    width="24"
+    height="24"
+    rx="12"
+    fill="currentColor"
+    mask="url(#badge-mask)"
+  />
+</svg>
+```
+
+SVGR 默认会通过 `prefixIds` 降低不同 SVG 文件之间的 `id` 冲突概率，但如果是**同一个组件实例被渲染多次**，重复 `id` 仍然可能出现。这时候最稳妥的做法就是把它封装成 React 组件，并用 `useId()` 生成实例级唯一 ID。
+
+```tsx
+import { useId } from "react";
+
+export default function BadgeIcon({ className }: { className?: string }) {
+  const maskId = useId();
+
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <mask id={maskId}>
+        <rect width="24" height="24" fill="white" />
+        <circle cx="12" cy="12" r="5" fill="black" />
+      </mask>
+
+      <rect
+        width="24"
+        height="24"
+        rx="12"
+        fill="currentColor"
+        mask={`url(#${maskId})`}
+      />
+    </svg>
+  );
+}
+```
+
+这样每个组件实例都会拥有自己独立的 `maskId`，既能避免冲突，也不会引入服务端渲染和客户端 hydration 不一致的问题。
+
+## 5. 什么时候用 SVG 组件，什么时候用图片资源
+
+最后给一个很实用的判断标准：
+
+- 需要动态改颜色、尺寸、`hover` 状态、动画时，用 SVG 组件
+- 只是展示一张不会变化的插图或品牌图时，优先用静态资源
+- SVG 内部有 `mask` / `clipPath` / 渐变 / 滤镜时，复用前先检查是否存在 `id` 冲突风险
+
+## 总结
+
+在 Next.js 16 里使用 SVG，推荐直接走 `@svgr/webpack` 这条路线：把 SVG 当 React 组件导入，再通过 `className` 和 `currentColor` 管理样式，整体体验会比传统 `<img>` 更灵活。
+
+如果你只记住两件事，那就是：
+
+- 图标想要好控制，优先保证 `viewBox` 正常，并避免根节点写死尺寸
+- 带 `mask` / `defs` / 渐变等 `id` 引用的 SVG，在同页多次复用时要警惕 `id` 冲突，必要时用 `useId()` 兜底

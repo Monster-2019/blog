@@ -1,0 +1,275 @@
+---
+title: "博客迁移实录：从 Hugo 到 Next.js + Tailwind CSS"
+slug: "hugo-migrate-nextjs-tailwindcss"
+author: "Monster Cone"
+pubDatetime: 2026-03-07
+tags: ["Next.js", "Tailwind CSS", "博客迁移", "Docker", "GitHub Actions"]
+category: "DevOps 与部署"
+description: 记录博客从 Hugo 迁移到 Next.js 与 Tailwind CSS 的原因、实施步骤，以及部署和发布链路中的实际取舍。
+---
+
+Hugo 许多主题都没有维护，并且配置复用性低，同时不熟悉语法，导致修改困难，因此我决定将Blog 从 Hugo 迁移到 tailwind-nextjs-starter-blog。
+
+为什么选择tailwind-nextjs-starter-blog，因为它同样拥有SSR，相比Hugo，性能差距小，同时它使用Js配置文件和Tailwindcss，方便我们自定义样式和个性化。
+
+#### 1. 创建新项目
+
+```bash
+mdkir next_blog // 创建新目录
+cd next_blog  // 进入项目目录
+npx degit 'timlrx/tailwind-nextjs-starter-blog'  // 拉取timlrx/tailwind-nextjs-starter-blog库内容
+npm install  // 安装依赖
+npm run dev  // 启动项目
+```
+
+通过上面的命令，我们已经成功启动了tailwind-nextjs-starter-blog项目，接下来我们填充自己的文章即可。
+
+#### 2. 迁移文章
+
+Hugo解析的是md文件，但tailwind-nextjs-starter-blog则解析mdx文件，因为tailwind-nextjs-starter-blog的contentlayer插件只解析mdx文件，所以即使你不需要使用mdx的语法，也需要将文件后缀修改为mdx，否则文章无法被解析生成页面。
+
+**接下来介绍几个迁移中常见的问题**
+
+1. 文章的Frontmatter
+
+因为文章依赖contentlayer生成页面，所以文章的Frontmatter如果不对，则会解析失败跳过该文章，导致缺少文章。Frontmatter规范如下：
+
+```md
+title (required) // e.g. 将Blog 从Hugo 迁移到 Nextjs TailwindCss
+date (required) // e.g. 2025-05-03
+tags (optional) // e.g. ['Nextjs', 'TailwindCss', 'Blog', 'Nginx', 'Docker']
+lastmod (optional) // e.g. 2025-05-04
+draft (optional) // e.g. false
+summary (optional) // e.g. This is a summary
+images (optional) // e.g. ['/static/images/canada/mountains.jpg', '/static/images/canada/toronto.jpg']
+authors (optional list which should correspond to the file names in `data/authors`. Uses `default` if none is specified) // e.g. ['default', 'sparrowhawk']
+layout (optional list which should correspond to the file names in `data/layouts`) // e.g. PostLayout
+canonicalUrl (optional, canonical url for the post for SEO) // e.g. https://tailwind-nextjs-starter-blog.vercel.app/blog/introducing-tailwind-nextjs-starter-blog
+```
+
+大部分参数都兼容之前的Hugo规范，但重点注意**summary**，不要使用引号，否则会导致contentlayer解析错误。
+
+2. 文章语法
+
+- Hugo很多主题都扩展了自己的语法，常见code的使用，如果使用了不兼容的语法也会导致contentlayer无法解析。一定要检查。
+
+- 因为是mdx，所以使用code语法时，需要注意一些特殊符号要转义，例如\{variable\}这种解析变量的语法。
+
+#### 3. 修改配置文件
+
+1. data/siteMetadata.js
+
+根据自己需求修改相关字段即可，但需注意尽量不要删除字段，会导致页面无法读取到顶级字段名而无法构建。
+
+2. data/authors/default.mdx
+
+修改为自己的信息即可，如果有其它作者可以在authors目录添加。
+
+3. next.config.js
+
+因为后续使用Docker部署，所以修改output为standalone，减小Docker镜像大小。
+
+到这一步，我们已经可以通过构建得到部署文件了，因为使用了husky，在构建时可能有一些pretter和eslint的格式问题，根据提示修复即可。
+
+#### 4. 编写Dockerfile构建镜像
+
+Next 提供了Dockerfile，可参考这里[https://github.com/vercel/next.js/blob/canary/examples/with-docker/Dockerfile](https://github.com/vercel/next.js/blob/canary/examples/with-docker/Dockerfile)
+
+我的Dockerfile如下：
+
+```
+# syntax=docker.io/docker/dockerfile:1
+
+FROM node:18-alpine AS base
+
+# Install dependencies only when needed
+FROM base AS deps
+# Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+
+# Install dependencies based on the preferred package manager
+COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* .npmrc* ./
+RUN npm ci
+
+# Rebuild the source code only when needed
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+ARG NEXT_PUBLIC_GISCUS_REPO
+ARG NEXT_PUBLIC_GISCUS_REPOSITORY_ID
+ARG NEXT_PUBLIC_GISCUS_CATEGORY
+ARG NEXT_PUBLIC_GISCUS_CATEGORY_ID
+ARG NEXT_PUBLIC_GOOGLE_ANALYTICS_ID
+
+ENV NEXT_PUBLIC_GISCUS_REPO=$NEXT_PUBLIC_GISCUS_REPO
+ENV NEXT_PUBLIC_GISCUS_REPOSITORY_ID=$NEXT_PUBLIC_GISCUS_REPOSITORY_ID
+ENV NEXT_PUBLIC_GISCUS_CATEGORY=$NEXT_PUBLIC_GISCUS_CATEGORY
+ENV NEXT_PUBLIC_GISCUS_CATEGORY_ID=$NEXT_PUBLIC_GISCUS_CATEGORY_ID
+ENV NEXT_PUBLIC_GOOGLE_ANALYTICS_ID=$NEXT_PUBLIC_GOOGLE_ANALYTICS_ID
+
+# Next.js collects completely anonymous telemetry data about general usage.
+# Learn more here: https://nextjs.org/telemetry
+# Uncomment the following line in case you want to disable telemetry during the build.
+# ENV NEXT_TELEMETRY_DISABLED=1
+
+RUN npm run build
+
+# Production image, copy all the files and run next
+FROM base AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+# Uncomment the following line in case you want to disable telemetry during runtime.
+# ENV NEXT_TELEMETRY_DISABLED=1
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+COPY --from=builder /app/public ./public
+
+# Automatically leverage output traces to reduce image size
+# https://nextjs.org/docs/advanced-features/output-file-tracing
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+ARG NEXT_PUBLIC_GISCUS_REPO
+ARG NEXT_PUBLIC_GISCUS_REPOSITORY_ID
+ARG NEXT_PUBLIC_GISCUS_CATEGORY
+ARG NEXT_PUBLIC_GISCUS_CATEGORY_ID
+ARG NEXT_PUBLIC_GOOGLE_ANALYTICS_ID
+
+ENV NEXT_PUBLIC_GISCUS_REPO=$NEXT_PUBLIC_GISCUS_REPO
+ENV NEXT_PUBLIC_GISCUS_REPOSITORY_ID=$NEXT_PUBLIC_GISCUS_REPOSITORY_ID
+ENV NEXT_PUBLIC_GISCUS_CATEGORY=$NEXT_PUBLIC_GISCUS_CATEGORY
+ENV NEXT_PUBLIC_GISCUS_CATEGORY_ID=$NEXT_PUBLIC_GISCUS_CATEGORY_ID
+ENV NEXT_PUBLIC_GOOGLE_ANALYTICS_ID=$NEXT_PUBLIC_GOOGLE_ANALYTICS_ID
+
+USER nextjs
+
+EXPOSE 80
+
+ENV PORT=80
+
+# server.js is created by next build from the standalone output
+# https://nextjs.org/docs/pages/api-reference/config/next-config-js/output
+ENV HOSTNAME="0.0.0.0"
+CMD ["node", "server.js"]
+```
+
+修改地方并不多，因为我使用了giscus和googleAnalytics，所以添加了一些配置ENV的代码，同时将端口修改为了80，对应以前的nginx端口，和宿主机对应，可以不用修改宿主机的配置。
+
+#### 5. 使用GitHub Actions自动化部署
+
+workflows文件如下：
+
+```yaml
+# main.yml
+name: CI to Server
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-push-docker-image:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check Out Repo
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          registry: registry.cn-hangzhou.aliyuncs.com
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Build and push
+        id: docker_build
+        uses: docker/build-push-action@v2
+        with:
+          context: ./
+          file: ./Dockerfile
+          push: true
+          tags: registry.cn-hangzhou.aliyuncs.com/dongxin/blog:latest
+          build-args: |
+            NEXT_PUBLIC_GISCUS_REPO=${{ secrets.NEXT_PUBLIC_GISCUS_REPO }}
+            NEXT_PUBLIC_GISCUS_REPOSITORY_ID=${{ secrets.NEXT_PUBLIC_GISCUS_REPOSITORY_ID }}
+            NEXT_PUBLIC_GISCUS_CATEGORY=${{ secrets.NEXT_PUBLIC_GISCUS_CATEGORY }}
+            NEXT_PUBLIC_GISCUS_CATEGORY_ID=${{ secrets.NEXT_PUBLIC_GISCUS_CATEGORY_ID }}
+            NEXT_PUBLIC_GOOGLE_ANALYTICS_ID=${{ secrets.NEXT_PUBLIC_GOOGLE_ANALYTICS_ID }}
+
+      - name: Image digest
+        run: echo ${{ steps.docker_build.outputs.digest }}
+
+  run-latest-docker-image:
+    needs: build-and-push-docker-image
+    runs-on: ubuntu-latest
+    steps:
+      - name: run-latest-docker-image
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: root
+          password: ${{ secrets.PASSWORD }}
+          script: |
+            sudo docker compose -f /opt/compose/blog/docker-compose.yml pull blog
+            sudo docker compose -f /opt/compose/blog/docker-compose.yml up -d --build blog
+```
+
+1. 登录阿里云镜像仓库
+2. 构建镜像，同时将需要的ENV变量传递进去，构建完成并上传
+3. 登录服务器，使用服务器的Docker Compose文件进行部署
+
+将敏感信息都存放在项目的secrets中。
+
+#### 6. 服务器 Docker Compose 和 Nginx 配置
+
+```yaml
+# docker-compose.yaml
+version: "3"
+services:
+  blog:
+    image: registry.cn-hangzhou.aliyuncs.com/dongxin/blog:latest
+    container_name: blog
+    restart: always
+    environment:
+      TZ: Asia/Shanghai
+    ports:
+      - 3002:80
+```
+
+```nginx
+# ngixn.conf
+server {
+    server_name dxin.cc;
+
+    add_header Access-Control-Allow-Methods *;
+    add_header Access-Control-Allow-Credentials false;
+    add_header Access-Control-Allow-Origin $http_origin;
+    add_header Access-Control-Allow-Headers
+    $http_access_control_request_headers;
+
+    location / {
+            proxy_pass http://127.0.0.1:3002;
+            proxy_set_header Host $proxy_host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}
+```
+
+docker暴露3002端口，映射到docker里的80端口，Nginx反代到3002端口。
+
+至此，就已经迁移完成，可以访问域名看到结果了。如果要修改页面布局或者修改页面样式，都可以在app目录下找到相关文件，相比Hugo更易修改。

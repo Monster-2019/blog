@@ -1,0 +1,33 @@
+---
+title: "Cloudflare 开启 HTTPS：域名 SSL 配置与模式说明"
+slug: "ssl"
+author: "Monster Cone"
+pubDatetime: 2025-08-23
+draft: true
+tags: ["Cloudflare", "HTTPS", "SSL", "域名配置"]
+category: "基础设施"
+description: 介绍如何借助 Cloudflare 为域名开启 HTTPS，并说明 DNS 切换、代理模式和 SSL/TLS 配置之间的关键区别。
+---
+
+给网站开启 HTTPS，已经不是“锦上添花”的优化，而是现在几乎所有公开站点的基础要求。相比明文传输的 HTTP，HTTPS 会在传输层使用 SSL/TLS 建立加密连接，能够减少中间人攻击、数据窃听和内容篡改的风险。无论是登录态、表单数据，还是普通页面访问，只要网站对外开放，HTTPS 基本都是必选项。
+
+如果你手上已经有域名，并且站点是部署在自己的服务器上，那么借助 Cloudflare 开启 HTTPS 是一种成本低、配置相对简单的方案。它的核心原理是：先把域名解析切换到 Cloudflare，再由 Cloudflare 作为反向代理为你的站点签发和托管边缘证书，最后把用户请求通过 Cloudflare 转发到源站。这样用户访问到的是 Cloudflare 的 HTTPS 服务，而不是你服务器裸露的 HTTP 入口。
+
+#### HTTP 和 HTTPS 的区别
+
+- HTTP：明文传输，默认端口为 `80`
+- HTTPS：在 HTTP 基础上加入 SSL/TLS 加密，默认端口为 `443`
+
+很多人看到网页地址栏有小锁图标，就以为整条链路都已经加密了。但实际上，Cloudflare 的 SSL/TLS 模式不同，含义也不同。如果只是在 Cloudflare 边缘启用 HTTPS，而源站仍然是纯 HTTP，那么这只是“浏览器到 Cloudflare”这段链路加密，并不是完整的端到端加密。
+
+#### 配置步骤
+
+首先在 Cloudflare 官网添加你的域名。添加成功后，Cloudflare 会给出一组新的 DNS 服务器地址。接下来需要到你的域名注册商后台，把原本的 DNS 服务器替换成 Cloudflare 提供的地址。这个步骤完成后，域名解析权才真正切换到 Cloudflare。
+
+DNS 切换生效后，就需要在 Cloudflare 控制台里重新配置解析记录。这里有一个容易忽略的点：当你把域名 DNS 托管给 Cloudflare 后，原域名服务商面板里的解析记录通常就不会继续生效了，后续维护应以 Cloudflare 后台为准。
+
+然后进入 `SSL/TLS` 配置页面选择合适模式。实际项目里，我更推荐优先使用 `Full` 或 `Full (strict)`。其中，`Full (strict)` 要求源站本身也有可验证的证书，安全性最好；`Flexible` 虽然配置省事，但 Cloudflare 到源站之间仍然可能是明文，不适合长期正式使用。
+
+最后再开启 `Always Use HTTPS` 之类的重定向选项，让用户访问 `http://` 时自动跳转到 `https://`。如果你的源站使用 Nginx，也可以保留 `80` 端口做重定向，但真正更关键的是确认 Cloudflare 到源站这段链路是否符合你的安全要求。
+
+整体来说，Cloudflare 能显著降低 HTTPS 接入门槛，但它不是“开了就万事大吉”。只有搞清楚 DNS 托管、代理链路和 SSL 模式之间的关系，网站的 HTTPS 配置才算真正完整。

@@ -1,0 +1,112 @@
+---
+title: "不用额外 State：Tailwind CSS 实现可编辑标题"
+slug: "tailwind-editable-title"
+author: "Monster Cone"
+pubDatetime: 2026-03-14
+tags: ["Tailwind CSS", "Next.js", "前端交互", "状态管理"]
+category: "前端开发"
+description: 使用 Tailwind CSS 的交互能力实现无额外状态管理的可编辑标题，减少前端状态冗余并提升交互体验。
+---
+
+在前端开发中，点击标题使其变为可编辑状态是一种常见的用户体验优化。然而，实现这一功能通常需要定义一个变量来维护编辑状态，当页面存在多个可编辑标题时，这往往会导致状态的冗余和复杂性增加。
+
+本文将为您分享一种创新的方法：**通过Tailwind CSS的`group`属性实现可编辑状态管理，从而摆脱传统的状态定义，有效减少冗余状态**。
+
+## 1. 传统可编辑标题的实现思路
+
+通常，我们会使用 `<h1>` 等标签显示标题，并通过 `<input>` 标签实现编辑功能。
+
+初始状态下，`<input>` 是不可见的。当用户点击标题时，标题隐藏，同时将 `isEditing` 状态设置为 `true`，显示 `<input>` 并自动聚焦。编辑完成后，当 `<input>` 失去焦点时，触发 `onChange` 事件更新标题内容，并将 `isEditing` 状态重置为 `false`。
+
+在这种模式下，`isEditing` 变量只有 `true` 和 `false` 两种状态，并且大部分时间都处于 `false` 状态。
+
+## 2. 常规状态管理实现可编辑功能
+
+在 React、Vue 等现代前端框架中，我们通常会使用一个 `state` 来管理用户界面的编辑状态；而在原生 JavaScript 中，则常用 `class` 切换 `<input>` 元素的隐藏与显示。
+
+以下是一个使用 React `useState` 进行状态管理的示例：
+
+```jsx
+"use client";
+
+import { useRef, useState } from "react";
+
+interface InputEditProps {
+  value: string | undefined;
+  onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
+}
+
+export default function InputEdit({ value, onChange }: InputEditProps) {
+  const [isEditing, setIsEditing] = useState<boolean>(false);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  const toggleEditing = () => {
+    if (isEditing) {
+      setIsEditing(false);
+    } else {
+      setIsEditing(true);
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 20);
+    }
+  };
+
+  return (
+    <div>
+      {!isEditing ? (
+        <h1 onClick={toggleEditing}>{value}</h1>
+      ) : (
+        <input
+          ref={inputRef}
+          type="text"
+          value={value}
+          onChange={onChange}
+          onBlur={toggleEditing}
+        />
+      )}
+    </div>
+  );
+}
+```
+
+## 3. 利用 Tailwind CSS `group` 实现无状态可编辑
+
+```javascript
+"use client";
+
+interface InputEditProps {
+  value: string | undefined;
+  onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
+}
+
+export default function InputEdit({ value, onChange }: InputEditProps) {
+  return (
+    <label className="group">
+      <p className="group-focus-within:hidden">{value}</p>
+      <input
+        type="text"
+        value={value}
+        className="absolute -z-10 opacity-0 group-focus-within:static group-focus-within:opacity-100"
+        onChange={onChange}
+      />
+    </label>
+  );
+}
+
+```
+
+从组件结构上可以看出，使用 Tailwind CSS group 实现的版本更为简洁，因为它完全移除了状态管理部分。其实现原理如下：
+
+1. label 元素：利用 HTML `<label>` 元素的一个特性——当点击 label 时，它会自动将其关联的子 `<input>` 元素聚焦。
+
+2. Tailwind CSS group 属性：我们将父元素（在这里是 `<label>`) 标记为 group。
+
+3. group-focus-within 变体：当 group 内部的任何子元素获得焦点时（在本例中是 `<input>`）, group-focus-within 变体就会被激活。我们利用这个变体来控制子元素 (`<p>` 和 `<input>`) 的显示与隐藏。
+
+这种方法利用了 `<input>` 元素的原生焦点状态，无需我们手动维护一个 state 来切换编辑状态，极大地简化了代码逻辑。
+
+> 注意：不要使用hidden、invisible去隐藏input，它会导致元素无法触发focus事件。
+
+## 4. 效果展示
+
+![.gif](https://s2.loli.net/2025/06/29/NXjRFrBkxGbPYsm.gif)
