@@ -3,7 +3,8 @@ title: "Nginx Proxy Manager 可视化配置 Nginx：搭配 Dozzle 和 NginxPulse
 slug: "nginx-proxy-manager-dozzle-nginxpulse"
 author: "Monster Cone"
 pubDatetime: 2026-09-07T00:00:00+08:00
-tags: ["Nginx", "Nginx Proxy Manager", "Docker", "Dozzle", "NginxPulse", "HTTPS"]
+tags:
+  ["Nginx", "Nginx Proxy Manager", "Docker", "Dozzle", "NginxPulse", "HTTPS"]
 category: "基础设施"
 description: "基于 Docker Compose 部署 Nginx Proxy Manager、Dozzle 和 NginxPulse，使用 NPM 网页界面可视化配置 Nginx，并分别查看 Docker 日志和 Nginx 访问日志。"
 ---
@@ -156,7 +157,7 @@ NPM 的核心工作是在网页中创建代理服务。进入 `Hosts` → `Proxy
 
 ![NPM 添加代理服务页面](/static/images/proxy_list.png)
 
-*添加代理服务时填写域名、协议、转发主机和转发端口。*
+_添加代理服务时填写域名、协议、转发主机和转发端口。_
 
 以 NginxPulse 为例：
 
@@ -182,7 +183,7 @@ NPM 的核心工作是在网页中创建代理服务。进入 `Hosts` → `Proxy
 
 ![NPM SSL 配置页面](/static/images/proxy_list_ssl.png)
 
-*在 SSL 标签中选择证书，并按需启用强制 HTTPS 和 HTTP/2。*
+_在 SSL 标签中选择证书，并按需启用强制 HTTPS 和 HTTP/2。_
 
 常用设置如下：
 
@@ -203,13 +204,13 @@ HSTS：确认 HTTPS 长期可用后再开启
 
 ![NPM 编辑通信规则页面](/static/images/rule.png)
 
-*通信规则可以设置授权列表和访问规则。*
+_通信规则可以设置授权列表和访问规则。_
 
 然后在 `授权列表` 标签中添加用户名和密码。保存通信规则后，回到代理服务的 `Details` 标签，在 `通信规则` 下拉框中选择刚才创建的规则，最后保存代理服务。
 
 ![NPM 通信规则授权列表](/static/images/auth_rule.png)
 
-*在授权列表中添加允许访问页面的用户名和密码。密码在界面中会以掩码显示。*
+_在授权列表中添加允许访问页面的用户名和密码。密码在界面中会以掩码显示。_
 
 配置完成后，访问该域名时浏览器会弹出用户名和密码对话框，只有授权列表中的账号可以进入页面。
 
