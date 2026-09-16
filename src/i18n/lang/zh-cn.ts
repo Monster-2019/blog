@@ -4,6 +4,7 @@ export default {
   nav: {
     home: "首页",
     posts: "文章",
+    projects: "项目",
     tags: "标签",
     about: "关于我",
     archives: "归档",
@@ -44,6 +45,8 @@ export default {
     tagsDesc: "文章中使用的全部标签。",
     postsTitle: "全部文章",
     postsDesc: "记录前端、全栈实践与开发工具使用心得。",
+    projectsTitle: "项目",
+    projectsDesc: "我开发和维护的一些产品、工具与开源项目。",
     archivesTitle: "文章归档",
     archivesDesc: "按时间归档的全部文章。",
     searchTitle: "搜索",

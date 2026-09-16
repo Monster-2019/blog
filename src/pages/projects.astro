@@ -1,0 +1,156 @@
+---
+import { getRelativeLocaleUrl } from "astro:i18n";
+import Breadcrumb from "@/components/Breadcrumb.astro";
+import Footer from "@/components/Footer.astro";
+import Header from "@/components/Header.astro";
+import Main from "@/components/Main.astro";
+import { projects } from "@/data/projects";
+import Layout from "@/layouts/Layout.astro";
+import { useTranslations } from "@/i18n";
+import config from "@/config";
+
+const locale = Astro.currentLocale ?? config.site.lang;
+const t = useTranslations(locale);
+const productProjects = projects.filter(project => project.kind === "product");
+const openSourceProjects = projects.filter(
+  project => project.kind === "openSource"
+);
+---
+
+<Layout
+  title={`${t.pages.projectsTitle} | ${config.site.title}`}
+  description={t.pages.projectsDesc}
+>
+  <Header />
+
+  <Breadcrumb />
+
+  <Main pageTitle={t.pages.projectsTitle} pageDesc={t.pages.projectsDesc}>
+    <section aria-labelledby="products-heading">
+      <div class="mb-6 max-w-2xl">
+        <h2 id="products-heading" class="text-2xl font-semibold tracking-tight">
+          产品与应用
+        </h2>
+        <p class="text-muted-foreground mt-2 leading-7">
+          正在持续维护的自有产品。可以直接访问体验，暂未开放源代码。
+        </p>
+      </div>
+
+      <ul class="grid gap-6 md:grid-cols-2">
+        {
+          productProjects.map(project => (
+            <li>
+              <article class="border-border group h-full overflow-hidden rounded-lg border">
+                {project.homepageUrl && project.image && (
+                  <a
+                    class="bg-muted block aspect-[16/10] overflow-hidden border-b"
+                    href={project.homepageUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label={`访问 ${project.name}`}
+                  >
+                    <img
+                      class="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.025]"
+                      src={project.image.src}
+                      alt={project.image.alt}
+                      width="1440"
+                      height="900"
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  </a>
+                )}
+
+                <div class="p-5 sm:p-6">
+                  <p class="text-muted-foreground text-sm">{project.eyebrow}</p>
+                  <h3 class="mt-1 text-xl font-semibold">{project.name}</h3>
+                  <p class="mt-3 leading-7">{project.description}</p>
+
+                  <ul class="mt-4 flex flex-wrap gap-2" aria-label="技术栈">
+                    {project.stack.map(item => (
+                      <li class="bg-muted rounded px-2 py-1 text-xs">{item}</li>
+                    ))}
+                  </ul>
+
+                  {project.homepageUrl && (
+                    <a
+                      class="border-border hover:border-accent hover:text-accent mt-6 inline-flex items-center gap-2 border-b pb-1 text-sm font-semibold transition-colors"
+                      href={project.homepageUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      访问应用
+                      <span aria-hidden="true">→</span>
+                    </a>
+                  )}
+                </div>
+              </article>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <section class="mt-16" aria-labelledby="opensource-heading">
+      <div class="mb-6 max-w-2xl">
+        <h2
+          id="opensource-heading"
+          class="text-2xl font-semibold tracking-tight"
+        >
+          开源项目
+        </h2>
+        <p class="text-muted-foreground mt-2 leading-7">
+          可以在 GitHub 查看源码、部署到自己的环境，或参与改进。
+        </p>
+      </div>
+
+      <ul class="divide-border divide-y border-y">
+        {
+          openSourceProjects.map(project => (
+            <li class="py-7 first:pt-6">
+              <div class="flex flex-col justify-between gap-5 sm:flex-row sm:items-start">
+                <div class="max-w-2xl">
+                  <p class="text-muted-foreground text-sm">{project.eyebrow}</p>
+                  <h3 class="mt-1 text-xl font-semibold sm:text-2xl">
+                    {project.name}
+                  </h3>
+                  <p class="mt-3 leading-7">{project.description}</p>
+                </div>
+
+                {project.repositoryUrl && (
+                  <a
+                    class="border-border hover:border-accent hover:text-accent shrink-0 border-b pb-1 font-mono text-sm transition-colors"
+                    href={project.repositoryUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {project.repositoryUrl.replace("https://", "")}
+                  </a>
+                )}
+              </div>
+
+              <div class="mt-5 flex flex-wrap items-center justify-between gap-4">
+                <ul class="flex flex-wrap gap-2" aria-label="技术栈">
+                  {project.stack.map(item => (
+                    <li class="bg-muted rounded px-2 py-1 text-xs">{item}</li>
+                  ))}
+                </ul>
+
+                {project.articlePath && (
+                  <a
+                    class="hover:text-accent text-sm font-medium transition-colors"
+                    href={getRelativeLocaleUrl(locale, project.articlePath)}
+                  >
+                    阅读相关介绍 <span aria-hidden="true">→</span>
+                  </a>
+                )}
+              </div>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+  </Main>
+
+  <Footer />
+</Layout>
