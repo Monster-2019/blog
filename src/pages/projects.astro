@@ -36,14 +36,14 @@ const openSourceProjects = projects.filter(
         </p>
       </div>
 
-      <ul class="grid gap-6 md:grid-cols-2">
+      <ul class="space-y-6">
         {
           productProjects.map(project => (
             <li>
-              <article class="border-border group h-full overflow-hidden rounded-lg border">
+              <article class="border-border group grid overflow-hidden rounded-lg border md:grid-cols-[minmax(0,1.25fr)_minmax(280px,0.95fr)]">
                 {project.homepageUrl && project.image && (
                   <a
-                    class="bg-muted block aspect-[16/10] overflow-hidden border-b"
+                    class="bg-muted block aspect-[16/10] overflow-hidden border-b md:aspect-auto md:min-h-[280px] md:border-r md:border-b-0"
                     href={project.homepageUrl}
                     target="_blank"
                     rel="noreferrer"
