@@ -40,10 +40,10 @@ const openSourceProjects = projects.filter(
         {
           productProjects.map(project => (
             <li>
-              <article class="border-border group grid overflow-hidden rounded-lg border md:grid-cols-[minmax(0,1.25fr)_minmax(280px,0.95fr)]">
+              <article class="border-border group grid overflow-hidden rounded-lg border md:grid-cols-[minmax(240px,0.8fr)_minmax(0,1.2fr)] md:items-center">
                 {project.homepageUrl && project.image && (
                   <a
-                    class="bg-muted block aspect-[16/10] overflow-hidden border-b md:aspect-auto md:min-h-[280px] md:border-r md:border-b-0"
+                    class="bg-muted block aspect-[16/10] overflow-hidden border-b md:m-4 md:mr-0 md:rounded-md md:border"
                     href={project.homepageUrl}
                     target="_blank"
                     rel="noreferrer"

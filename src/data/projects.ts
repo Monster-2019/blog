@@ -57,7 +57,7 @@ export const projects: Project[] = [
     description:
       "运行在 Cloudflare Workers 上的 FCM HTTP v1 推送服务，支持 HMAC 鉴权、KV Token 缓存，以及通过 QStash 定时发送。",
     repositoryUrl: "https://github.com/Monster-2019/monster_push_fcm_hono",
-    articlePath: "blog/fcm-scheduled-push-qstash",
+    articlePath: "blog/cloudflare-workers-fcm",
     stack: ["Cloudflare Workers", "Hono", "FCM", "QStash"],
   },
 ];
